@@ -1,6 +1,6 @@
 #!/bin/bash
 # Bielik MVP - Start Script
-# Uruchamia cały stack Docker
+# Uruchamia stack Docker + używa lokalnej Ollamy
 
 set -e
 
@@ -11,11 +11,44 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
+# Load .env if exists
+if [ -f .env ]; then
+    export $(grep -v '^#' .env | xargs)
+fi
+
+# Defaults
+API_PORT=${API_PORT:-8005}
+FRONTEND_PORT=${FRONTEND_PORT:-3005}
+ wczeOLLAMA_MODEL=${OLLAMA_MODEL:-qwen2.5:14b}
+OLLAMA_MODEL_FALLBACK=${OLLAMA_MODEL_FALLBACK:-llama3.2}
+
 echo -e "${BLUE}"
 echo "╔══════════════════════════════════════════╗"
 echo "║     🦅 BIELIK MVP - Uruchamianie        ║"
 echo "╚══════════════════════════════════════════╝"
 echo -e "${NC}"
+
+# Check local Ollama
+echo -e "${BLUE}🤖 Sprawdzam lokalną Ollamę...${NC}"
+if ! command -v ollama &> /dev/null; then
+    echo -e "${RED}❌ Ollama nie jest zainstalowana!${NC}"
+    echo "Zainstaluj: curl -fsSL https://ollama.ai/install.sh | sh"
+    exit 1
+fi
+
+if ! curl -s http://localhost:11434/ &>/dev/null; then
+    echo -e "${YELLOW}⚠ Ollama nie działa, uruchamiam...${NC}"
+    ollama serve &>/dev/null &
+    sleep 3
+fi
+
+if curl -s http://localhost:11434/ &>/dev/null; then
+    echo -e "${GREEN}✓ Ollama działa (lokalna)${NC}"
+else
+    echo -e "${RED}❌ Nie można uruchomić Ollamy${NC}"
+    echo "Spróbuj ręcznie: ollama serve"
+    exit 1
+fi
 
 # Check Docker
 if ! command -v docker &> /dev/null; then
@@ -40,20 +73,57 @@ fi
 
 echo -e "${GREEN}✓ Docker Compose v2 dostępny${NC}"
 
-# Check memory
-TOTAL_MEM=$(free -g 2>/dev/null | awk '/^Mem:/{print $2}' || echo "16")
-if [ "$TOTAL_MEM" -lt 8 ]; then
-    echo -e "${YELLOW}⚠️  Mniej niż 8GB RAM - może być wolno${NC}"
+# Check/pull model
+echo ""
+echo -e "${BLUE}🤖 Sprawdzam model: ${OLLAMA_MODEL}...${NC}"
+
+# Funkcja do sprawdzenia czy model jest załadowany
+check_model() {
+    local model_name="$1"
+    curl -s http://localhost:11434/api/tags 2>/dev/null | grep -q "\"name\":\"${model_name}\""
+}
+
+# Funkcja do pobrania modelu
+pull_model() {
+    local model_name="$1"
+    echo -e "${YELLOW}⏳ Pobieram model ${model_name}...${NC}"
+    if ollama pull "$model_name" 2>/dev/null; then
+        echo -e "${GREEN}✓ Model ${model_name} pobrany${NC}"
+        return 0
+    else
+        echo -e "${RED}✗ Nie udało się pobrać ${model_name}${NC}"
+        return 1
+    fi
+}
+
+# Sprawdź główny model
+if check_model "$OLLAMA_MODEL"; then
+    echo -e "${GREEN}✓ Model ${OLLAMA_MODEL} załadowany${NC}"
+else
+    # Próbuj pobrać główny model
+    if ! pull_model "$OLLAMA_MODEL"; then
+        # Fallback na zapasowy model
+        echo -e "${YELLOW}⚠ Próbuję model zapasowy: ${OLLAMA_MODEL_FALLBACK}${NC}"
+        if check_model "$OLLAMA_MODEL_FALLBACK"; then
+            echo -e "${GREEN}✓ Model ${OLLAMA_MODEL_FALLBACK} załadowany${NC}"
+            OLLAMA_MODEL="$OLLAMA_MODEL_FALLBACK"
+        else
+            pull_model "$OLLAMA_MODEL_FALLBACK" || true
+            OLLAMA_MODEL="$OLLAMA_MODEL_FALLBACK"
+        fi
+    fi
 fi
 
-# Start services (Docker Compose sam zbuduje obrazy przy pierwszym uruchomieniu)
+echo -e "${BLUE}   Używany model: ${OLLAMA_MODEL}${NC}"
+
+# Start services
 echo ""
-echo -e "${BLUE}🚀 Uruchamiam serwisy (build tylko przy pierwszym razie)...${NC}"
+echo -e "${BLUE}🚀 Uruchamiam serwisy Docker...${NC}"
 docker compose up -d
 
 echo ""
 echo -e "${BLUE}⏳ Czekam na start serwisów...${NC}"
-sleep 10
+sleep 5
 
 # Check services
 echo ""
@@ -63,43 +133,21 @@ echo -e "${BLUE}🔍 Sprawdzam status...${NC}"
 if docker compose exec -T postgres pg_isready -U bielik &>/dev/null; then
     echo -e "${GREEN}✓ PostgreSQL działa${NC}"
 else
-    echo -e "${RED}✗ PostgreSQL nie odpowiada${NC}"
-fi
-
-# Ollama
-if curl -s http://localhost:11434/ &>/dev/null; then
-    echo -e "${GREEN}✓ Ollama działa${NC}"
-else
-    echo -e "${YELLOW}⚠ Ollama uruchamia się...${NC}"
+    echo -e "${YELLOW}⚠ PostgreSQL uruchamia się...${NC}"
 fi
 
 # API
-if curl -s http://localhost:8000/ &>/dev/null; then
+if curl -s http://localhost:${API_PORT}/ &>/dev/null; then
     echo -e "${GREEN}✓ API działa${NC}"
 else
     echo -e "${YELLOW}⚠ API uruchamia się...${NC}"
 fi
 
 # Frontend
-if curl -s http://localhost:3000/ &>/dev/null; then
+if curl -s http://localhost:${FRONTEND_PORT}/ &>/dev/null; then
     echo -e "${GREEN}✓ Frontend działa${NC}"
 else
     echo -e "${YELLOW}⚠ Frontend uruchamia się...${NC}"
-fi
-
-# Check model
-echo ""
-echo -e "${BLUE}🤖 Sprawdzam model Bielik...${NC}"
-sleep 5
-
-MODELS=$(curl -s http://localhost:11434/api/tags 2>/dev/null | grep -o '"name":"[^"]*bielik[^"]*"' || echo "")
-
-if [ -n "$MODELS" ]; then
-    echo -e "${GREEN}✓ Model Bielik załadowany${NC}"
-else
-    echo -e "${YELLOW}⏳ Pobieram model Bielik (może potrwać kilka minut)...${NC}"
-    docker exec bielik-ollama ollama pull mwiewior/bielik &
-    echo -e "${YELLOW}   Pobieranie w tle. Sprawdź: docker logs -f bielik-ollama${NC}"
 fi
 
 # Summary
@@ -109,16 +157,16 @@ echo "╔═══════════════════════�
 echo "║           ✅ GOTOWE!                     ║"
 echo "╠══════════════════════════════════════════╣"
 echo "║                                          ║"
-echo "║  🌐 Frontend: http://localhost:3000      ║"
-echo "║  📡 API:      http://localhost:8000/docs ║"
+echo "║  🌐 Frontend: http://localhost:${FRONTEND_PORT}      ║"
+echo "║  📡 API:      http://localhost:${API_PORT}/docs ║"
 echo "║  🤖 Ollama:   http://localhost:11434     ║"
 echo "║  🗄️  PostgreSQL: localhost:5432          ║"
 echo "║                                          ║"
 echo "╠══════════════════════════════════════════╣"
 echo "║  Przydatne komendy:                      ║"
-echo "║  • docker compose logs -f               ║"
-echo "║  • docker compose ps                    ║"
-echo "║  • docker compose down                  ║"
+echo "║  • make logs                            ║"
+echo "║  • make ps                              ║"
+echo "║  • make stop                            ║"
 echo "╚══════════════════════════════════════════╝"
 echo -e "${NC}"
 
@@ -127,12 +175,12 @@ if command -v xdg-open &> /dev/null; then
     read -p "Otworzyć przeglądarkę? (y/n) " -n 1 -r
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        xdg-open http://localhost:3000
+        xdg-open http://localhost:${FRONTEND_PORT}
     fi
 elif command -v open &> /dev/null; then
     read -p "Otworzyć przeglądarkę? (y/n) " -n 1 -r
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        open http://localhost:3000
+        open http://localhost:${FRONTEND_PORT}
     fi
 fi

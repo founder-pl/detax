@@ -13,6 +13,25 @@ const MODULES = {
     vat: { name: 'VAT', icon: '💰' }
 };
 
+const PROJECT_FILES = {
+    'projekt-1': [
+        'ksef_terminy.pdf',
+        'instrukcja_e_faktury.docx',
+        'umowa_klient_A.pdf'
+    ],
+    'projekt-2': [
+        'analiza_umowy_b2b.pdf',
+        'checklista_b2b.xlsx'
+    ],
+    'projekt-3': [
+        'vat_oss_instrukcja.pdf',
+        'jpk_vat_przyklad.xlsx'
+    ],
+    default: [
+        'notatki_projektowe.txt'
+    ]
+};
+
 // State
 let currentModule = 'default';
 let isLoading = false;
@@ -31,7 +50,9 @@ const elements = {
     sourcesPanel: document.getElementById('sources-panel'),
     sourcesList: document.getElementById('sources-list'),
     closeSources: document.getElementById('close-sources'),
-    quickQuestions: document.getElementById('quick-questions')
+    quickQuestions: document.getElementById('quick-questions'),
+    projectsList: document.getElementById('projects-list'),
+    filesList: document.getElementById('files-list')
 };
 
 // Initialize
@@ -40,6 +61,8 @@ document.addEventListener('DOMContentLoaded', () => {
     initForm();
     initQuickQuestions();
     initSourcesPanel();
+    initChannels();
+    initProjects();
     checkHealth();
     
     // Focus input
@@ -56,6 +79,73 @@ function initModuleButtons() {
             setModule(module);
         });
     });
+}
+
+function initChannels() {
+    const channelItems = document.querySelectorAll('.channel-item');
+    channelItems.forEach(item => {
+        item.addEventListener('click', () => {
+            const module = item.dataset.module;
+            if (!module) return;
+            channelItems.forEach(i => i.classList.remove('active'));
+            item.classList.add('active');
+            setModule(module);
+        });
+    });
+
+    // Kontakty - kliknięcie
+    const contactItems = document.querySelectorAll('.contact-item');
+    contactItems.forEach(item => {
+        item.addEventListener('click', () => {
+            contactItems.forEach(i => i.classList.remove('active'));
+            item.classList.add('active');
+        });
+    });
+}
+
+function initProjects() {
+    if (!elements.projectsList || !elements.filesList) return;
+    const items = elements.projectsList.querySelectorAll('.project-item');
+    items.forEach(item => {
+        item.addEventListener('click', () => {
+            items.forEach(i => i.classList.remove('active'));
+            item.classList.add('active');
+            const projectId = item.dataset.project;
+            renderFiles(projectId);
+        });
+    });
+    let active = elements.projectsList.querySelector('.project-item.active');
+    if (!active && items[0]) {
+        active = items[0];
+        active.classList.add('active');
+    }
+    if (active) {
+        renderFiles(active.dataset.project);
+    }
+}
+
+function renderFiles(projectId) {
+    if (!elements.filesList) return;
+    const files = PROJECT_FILES[projectId] || PROJECT_FILES.default || [];
+    elements.filesList.innerHTML = files
+        .map(name => {
+            const icon = getFileIcon(name);
+            return `<li class="file-item">${icon} ${escapeHtml(name)}</li>`;
+        })
+        .join('');
+}
+
+function getFileIcon(filename) {
+    const ext = filename.split('.').pop().toLowerCase();
+    const icons = {
+        pdf: '📑',
+        doc: '📝', docx: '📝',
+        xls: '📊', xlsx: '📊',
+        txt: '📄',
+        png: '🖼️', jpg: '🖼️', jpeg: '🖼️', gif: '🖼️',
+        zip: '📦', rar: '📦'
+    };
+    return icons[ext] || '📄';
 }
 
 function setModule(module) {

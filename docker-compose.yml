@@ -1,38 +1,37 @@
 # Bielik MVP - Docker Compose
 # Uruchom: docker compose up -d
-
-version: '3.8'
+# Używa lokalnej Ollamy (na hoście), nie w Docker
 
 services:
   # ============================================
-  # LLM Backend - Ollama z modelem Bielik
+  # LLM Backend - Ollama (WYŁĄCZONE - używamy lokalnej)
   # ============================================
-  ollama:
-    image: ollama/ollama:latest
-    container_name: bielik-ollama
-    ports:
-      - "${OLLAMA_PORT:-11434}:11434"
-    volumes:
-      - ollama_data:/root/.ollama
-    environment:
-      - OLLAMA_HOST=0.0.0.0
-      - OLLAMA_KEEP_ALIVE=24h
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:11434/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    # ----------------------------------------
-    # Dla GPU NVIDIA odkomentuj poniższe:
-    # ----------------------------------------
-    # deploy:
-    #   resources:
-    #     reservations:
-    #       devices:
-    #         - driver: nvidia
-    #           count: all
-    #           capabilities: [gpu]
+  # ollama:
+  #   image: ollama/ollama:latest
+  #   container_name: bielik-ollama
+  #   ports:
+  #     - "${OLLAMA_PORT:-11434}:11434"
+  #   volumes:
+  #     - ./data/ollama:/root/.ollama
+  #   environment:
+  #     - OLLAMA_HOST=0.0.0.0
+  #     - OLLAMA_KEEP_ALIVE=24h
+  #   restart: unless-stopped
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:11434/"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+  #   # ----------------------------------------
+  #   # Dla GPU NVIDIA odkomentuj poniższe:
+  #   # ----------------------------------------
+  #   # deploy:
+  #   #   resources:
+  #   #     reservations:
+  #   #       devices:
+  #   #         - driver: nvidia
+  #   #         count: all
+  #   #         capabilities: [gpu]
 
   # ============================================
   # Baza danych - PostgreSQL z pgvector
@@ -65,14 +64,14 @@ services:
       dockerfile: Dockerfile
     container_name: bielik-api
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-bielik}:${POSTGRES_PASSWORD:-bielik_dev_2024}@${POSTGRES_HOST:-postgres}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-bielik_knowledge}
-      OLLAMA_URL: http://${OLLAMA_HOST_INTERNAL:-ollama}:11434
+      DATABASE_URL: postgresql://${POSTGRES_USER:-bielik}:${POSTGRES_PASSWORD:-bielik_dev_2024}@${POSTGRES_HOST:-postgres}:5432/${POSTGRES_DB:-bielik_knowledge}
+      OLLAMA_URL: http://host.docker.internal:11434
       OLLAMA_MODEL: ${OLLAMA_MODEL:-mwiewior/bielik}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       postgres:
         condition: service_healthy
-      ollama:
-        condition: service_started
     ports:
       - "${API_PORT:-8000}:8000"
     volumes:
@@ -99,27 +98,25 @@ services:
     restart: unless-stopped
 
   # ============================================
-  # Model Loader - jednorazowe pobranie modelu
+  # Model Loader (WYŁĄCZONE - używamy lokalnej Ollamy)
   # ============================================
-  model-loader:
-    image: curlimages/curl:latest
-    container_name: bielik-model-loader
-    depends_on:
-      ollama:
-        condition: service_started
-    entrypoint: >
-      sh -c "
-        echo 'Czekam na Ollama...' &&
-        sleep 15 &&
-        echo 'Pobieram model Bielik...' &&
-        curl -X POST http://ollama:11434/api/pull -d '{\"name\": \"mwiewior/bielik\"}' &&
-        echo 'Model pobrany!'
-      "
-    restart: "no"
+  # model-loader:
+  #   image: curlimages/curl:latest
+  #   container_name: bielik-model-loader
+  #   depends_on:
+  #     ollama:
+  #       condition: service_started
+  #   entrypoint: >
+  #     sh -c "
+  #       echo 'Czekam na Ollama...' &&
+  #       sleep 15 &&
+  #       echo 'Pobieram model Bielik...' &&
+  #       curl -X POST http://ollama:11434/api/pull -d '{\"name\": \"mwiewior/bielik\"}' &&
+  #       echo 'Model pobrany!'
+  #     "
+  #   restart: "no"
 
 volumes:
-  ollama_data:
-    name: bielik-ollama-data
   postgres_data:
     name: bielik-postgres-data
 

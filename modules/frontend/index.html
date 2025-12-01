@@ -47,53 +47,33 @@
         </nav>
 
         <div class="main-layout">
-            <aside class="sidebar-left">
-                <div class="sidebar-section">
-                    <h3>Kontakty</h3>
-                    <ul class="contacts-list">
-                        <li class="contact-item active">Klient A</li>
-                        <li class="contact-item">Klient B</li>
-                        <li class="contact-item">Biuro księgowe</li>
-                    </ul>
-                </div>
-                <div class="sidebar-section">
-                    <h3>Kanały</h3>
-                    <ul class="channels-list">
-                        <li class="channel-item active"># ogólne</li>
-                        <li class="channel-item"># ksef</li>
-                        <li class="channel-item"># b2b</li>
-                        <li class="channel-item"># zus</li>
-                        <li class="channel-item"># vat</li>
-                    </ul>
-                </div>
-            </aside>
-
-            <div class="main-content">
-                <section class="projects-panel">
-                    <div class="projects-header">
-                        <h3>Projekty</h3>
-                    </div>
-                    <div class="projects-body">
-                        <ul class="projects-list" id="projects-list">
-                            <li class="project-item active" data-project="projekt-1">Projekt KSeF</li>
-                            <li class="project-item" data-project="projekt-2">Projekt B2B</li>
-                            <li class="project-item" data-project="projekt-3">Projekt VAT</li>
+            <!-- LEWA STRONA: Czat + Kontakty + Kanały -->
+            <div class="panel-left">
+                <!-- Kontakty i Kanały -->
+                <aside class="sidebar-section-container">
+                    <div class="sidebar-section">
+                        <h3>👥 Kontakty</h3>
+                        <ul class="contacts-list">
+                            <li class="contact-item active">Klient A</li>
+                            <li class="contact-item">Klient B</li>
+                            <li class="contact-item">Biuro księgowe</li>
                         </ul>
-                        <div class="files-panel">
-                            <h4>Pliki</h4>
-                            <ul class="files-list" id="files-list">
-                                <li class="file-item">ksef_terminy.pdf</li>
-                                <li class="file-item">instrukcja_e_faktury.docx</li>
-                                <li class="file-item">umowa_klient_A.pdf</li>
-                            </ul>
-                        </div>
                     </div>
-                </section>
+                    <div class="sidebar-section">
+                        <h3>📢 Kanały</h3>
+                        <ul class="channels-list">
+                            <li class="channel-item active" data-module="default"># ogólne</li>
+                            <li class="channel-item" data-module="ksef"># ksef</li>
+                            <li class="channel-item" data-module="b2b"># b2b</li>
+                            <li class="channel-item" data-module="zus"># zus</li>
+                            <li class="channel-item" data-module="vat"># vat</li>
+                        </ul>
+                    </div>
+                </aside>
 
-                <!-- Main chat area -->
+                <!-- Czat -->
                 <main class="chat-container">
                     <div id="messages" class="messages">
-                        <!-- Welcome message -->
                         <div class="message assistant">
                             <div class="message-avatar">🦅</div>
                             <div class="message-content">
@@ -105,12 +85,11 @@
                                     <li><strong>ZUS</strong> - składki, ubezpieczenia, obliczenia</li>
                                     <li><strong>VAT</strong> - JPK, VAT OSS, rozliczenia</li>
                                 </ul>
-                                <p>Wybierz moduł powyżej i zadaj pytanie!</p>
+                                <p>Wybierz kanał po lewej i zadaj pytanie!</p>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Input area -->
                     <form id="chat-form" class="input-area">
                         <div class="input-wrapper">
                             <input 
@@ -136,21 +115,42 @@
 
                 <!-- Quick questions -->
                 <section class="quick-questions" id="quick-questions">
-                    <h4>Popularne pytania:</h4>
+                    <span class="quick-label">Szybkie pytania:</span>
                     <div class="quick-btns">
-                        <button class="quick-btn" data-question="Kiedy KSeF będzie obowiązkowy?" data-module="ksef">
-                            Kiedy KSeF będzie obowiązkowy?
-                        </button>
-                        <button class="quick-btn" data-question="Jak ocenić czy moja umowa B2B jest bezpieczna?" data-module="b2b">
-                            Czy moja umowa B2B jest bezpieczna?
-                        </button>
-                        <button class="quick-btn" data-question="Ile wynosi składka zdrowotna na ryczałcie w 2025?" data-module="zus">
-                            Składka zdrowotna 2025 ryczałt
-                        </button>
-                        <button class="quick-btn" data-question="Co to jest VAT OSS i kiedy go stosować?" data-module="vat">
-                            Co to VAT OSS?
-                        </button>
+                        <button class="quick-btn" data-question="Kiedy KSeF będzie obowiązkowy?" data-module="ksef">KSeF</button>
+                        <button class="quick-btn" data-question="Jak ocenić czy moja umowa B2B jest bezpieczna?" data-module="b2b">B2B</button>
+                        <button class="quick-btn" data-question="Ile wynosi składka zdrowotna na ryczałcie w 2025?" data-module="zus">ZUS</button>
+                        <button class="quick-btn" data-question="Co to jest VAT OSS i kiedy go stosować?" data-module="vat">VAT</button>
                     </div>
+                </section>
+            </div>
+
+            <!-- PRAWA STRONA: Projekty + Pliki -->
+            <div class="panel-right">
+                <section class="projects-panel">
+                    <div class="projects-header">
+                        <h3>📁 Projekty</h3>
+                    </div>
+                    <ul class="projects-list" id="projects-list">
+                        <li class="project-item active" data-project="projekt-1">
+                            <span class="project-icon">📋</span> Projekt KSeF
+                        </li>
+                        <li class="project-item" data-project="projekt-2">
+                            <span class="project-icon">💼</span> Projekt B2B
+                        </li>
+                        <li class="project-item" data-project="projekt-3">
+                            <span class="project-icon">💰</span> Projekt VAT
+                        </li>
+                    </ul>
+                </section>
+
+                <section class="files-panel">
+                    <div class="files-header">
+                        <h3>📄 Pliki projektu</h3>
+                    </div>
+                    <ul class="files-list" id="files-list">
+                        <!-- Pliki ładowane dynamicznie przez JS -->
+                    </ul>
                 </section>
             </div>
         </div>

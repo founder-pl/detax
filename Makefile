@@ -3,26 +3,42 @@
 include .env
 export
 
-.PHONY: help up down logs api-logs frontend-logs ps build clean \
-	package package-upload test
+.PHONY: help up start stop down restart logs api-logs frontend-logs ps build clean \
+	package package-upload publish publish-test test pull-model
 
 help:
 	@echo "Dostępne komendy:"
-	@echo "  make up           - uruchom docker compose (używa .env)"
+	@echo "  make start        - uruchom wszystko (Ollama lokalna + Docker + model)"
+	@echo "  make up           - tylko docker compose up -d (szybki start)"
 	@echo "  make down         - zatrzymaj kontenery"
+	@echo "  make stop         - alias do down"
+	@echo "  make restart      - zatrzymaj, zbuduj obrazy i uruchom ponownie"
 	@echo "  make logs         - logi wszystkich serwisów"
 	@echo "  make api-logs     - logi backendu API"
 	@echo "  make frontend-logs- logi frontendu"
 	@echo "  make build        - zbuduj obrazy docker"
 	@echo "  make ps           - status kontenerów"
+	@echo "  make pull-model   - pobierz model z .env (OLLAMA_MODEL)"
+	@echo "  make clean        - usuń dane (PostgreSQL), modele Ollama zostają"
 	@echo "  make package      - zbuduj paczkę Pythona dla API (sdist+wheel)"
 	@echo "  make package-upload - wyślij paczkę na PyPI/TestPyPI (wymaga twine)"
+	@echo "  make publish      - zbuduj i wyślij paczkę na PyPI (wymaga twine)"
+	@echo "  make publish-test - zbuduj i wyślij paczkę na TestPyPI (wymaga twine)"
 
 up:
 	docker compose up -d
 
+start:
+	./scripts/start.sh
+
 down:
 	docker compose down
+
+stop: down
+
+restart:
+	docker compose down
+	docker compose up -d --build
 
 logs:
 	docker compose logs -f
@@ -41,7 +57,11 @@ build:
 
 clean:
 	docker compose down -v || true
-	rm -rf dist/ build/ *.egg-info
+	rm -rf dist/ build/ *.egg-info modules/api/dist/ modules/api/build/ modules/api/*.egg-info
+
+# Pobierz model (używa OLLAMA_MODEL z .env)
+pull-model:
+	ollama pull $(OLLAMA_MODEL)
 
 # --- Python package (modules/api jako paczka) ---
 
@@ -50,4 +70,10 @@ package:
 
 package-upload:
 	cd modules/api && twine upload dist/*
+
+publish: package
+	cd modules/api && twine upload dist/*
+
+publish-test: package
+	cd modules/api && twine upload --repository testpypi dist/*
 
