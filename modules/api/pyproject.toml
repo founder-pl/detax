@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bielik-mvp-api"
+version = "0.1.0"
+description = "Bielik MVP API - FastAPI backend (RAG) for Polish entrepreneurs"
+readme = "../README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+authors = [
+  { name = "Founder.pl", email = "dev@founder.pl" },
+]
+keywords = ["bielik", "llm", "rag", "fastapi", "poland", "tax"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "License :: OSI Approved :: Apache Software License",
+  "Framework :: FastAPI",
+]
+
+dependencies = [
+  "fastapi==0.109.2",
+  "uvicorn[standard]==0.27.1",
+  "psycopg2-binary==2.9.9",
+  "requests==2.31.0",
+  "pydantic==2.6.1",
+  "python-multipart==0.0.9",
+]
+
+[project.urls]
+Homepage = "https://github.com/founder-pl/bielik-mvp"
+Source = "https://github.com/founder-pl/bielik-mvp"
+
+[tool.setuptools]
+package-dir = {"" = "."}
+# Pakiety (katalogi z __init__.py)
+packages = ["routers", "services"]
+# Moduły na najwyższym poziomie (np. main.py)
+py-modules = ["main"]
+
+[project.optional-dependencies]
+dev = [
+  "pytest",
+  "httpx",
+]

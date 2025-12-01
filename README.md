@@ -22,7 +22,7 @@
 
 ```bash
 # 1. Sklonuj repozytorium
-git clone https://github.com/softreck/bielik-mvp.git
+git clone https://github.com/founder-pl/bielik-mvp.git
 cd bielik-mvp
 
 # 2. Uruchom (pierwsze uruchomienie pobiera ~7GB modelu)

@@ -1,0 +1,24 @@
+# Override to use host Ollama instead of container
+services:
+  ollama:
+    image: alpine:latest
+    container_name: bielik-ollama
+    entrypoint: ["sleep", "infinity"]
+    ports: !override []
+    volumes: !override []
+    healthcheck:
+      test: ["CMD", "true"]
+      interval: 5s
+      timeout: 2s
+      retries: 1
+
+  model-loader:
+    profiles: ["disabled"]
+
+  api:
+    environment:
+      DATABASE_URL: postgresql://bielik:bielik_dev_2024@postgres:5432/bielik_knowledge
+      OLLAMA_URL: http://host.docker.internal:11434
+      OLLAMA_MODEL: mwiewior/bielik
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

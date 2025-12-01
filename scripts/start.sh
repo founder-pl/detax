@@ -46,13 +46,9 @@ if [ "$TOTAL_MEM" -lt 8 ]; then
     echo -e "${YELLOW}⚠️  Mniej niż 8GB RAM - może być wolno${NC}"
 fi
 
-# Build and start
+# Start services (Docker Compose sam zbuduje obrazy przy pierwszym uruchomieniu)
 echo ""
-echo -e "${BLUE}📦 Buduję obrazy Docker...${NC}"
-docker compose build --quiet
-
-echo ""
-echo -e "${BLUE}🚀 Uruchamiam serwisy...${NC}"
+echo -e "${BLUE}🚀 Uruchamiam serwisy (build tylko przy pierwszym razie)...${NC}"
 docker compose up -d
 
 echo ""
