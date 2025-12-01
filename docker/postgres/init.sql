@@ -74,6 +74,38 @@ CREATE TABLE project_files (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
+-- Przykładowe projekty i pliki (demo)
+WITH kontrahent_proj AS (
+    INSERT INTO projects (name, description, contact)
+    VALUES
+        ('Umowa sprzedaży z Kontrahentem', 'Projekt umowy sprzedaży usług B2B', 'Kontrahent'),
+        ('Faktury KSeF dla Kontrahenta', 'Obsługa e-faktur KSeF', 'Kontrahent')
+    RETURNING id, name
+),
+ksiegowa_proj AS (
+    INSERT INTO projects (name, description, contact)
+    VALUES
+        ('Rozliczenia VAT 2025', 'Rozliczenia miesięczne VAT', 'Księgowa'),
+        ('ZUS i składki', 'Obsługa składek ZUS', 'Księgowa')
+    RETURNING id, name
+),
+doradca_proj AS (
+    INSERT INTO projects (name, description, contact)
+    VALUES
+        ('Analiza umowy B2B', 'Ocena ryzyka przekwalifikowania', 'Doradca podatkowy')
+    RETURNING id, name
+)
+INSERT INTO project_files (project_id, filename, path)
+SELECT id, 'umowa_sprzedazy.pdf', '/files/kontrahent/umowa_sprzedazy.pdf' FROM kontrahent_proj WHERE name LIKE 'Umowa%'
+UNION ALL
+SELECT id, 'faktury_ksef_kontrahent.xlsx', '/files/kontrahent/faktury_ksef.xlsx' FROM kontrahent_proj WHERE name LIKE 'Faktury%'
+UNION ALL
+SELECT id, 'rozliczenia_vat_2025.xlsx', '/files/ksiegowa/rozliczenia_vat_2025.xlsx' FROM ksiegowa_proj WHERE name LIKE 'Rozliczenia%'
+UNION ALL
+SELECT id, 'zus_skladki_2025.pdf', '/files/ksiegowa/zus_skladki_2025.pdf' FROM ksiegowa_proj WHERE name LIKE 'ZUS%'
+UNION ALL
+SELECT id, 'analiza_umowy_b2b.pdf', '/files/doradca/analiza_umowy_b2b.pdf' FROM doradca_proj;
+
 -- ============================================
 -- INDEKSY
 -- ============================================

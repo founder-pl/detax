@@ -1,0 +1,12 @@
+{
+  "name": "bielik-frontend",
+  "private": true,
+  "scripts": {
+    "build": "tsc && esbuild src/main.ts --bundle --outfile=js/app.js --minify",
+    "build:dev": "tsc && esbuild src/main.ts --bundle --sourcemap --outfile=js/app.js"
+  },
+  "devDependencies": {
+    "esbuild": "^0.23.0",
+    "typescript": "^5.6.0"
+  }
+}

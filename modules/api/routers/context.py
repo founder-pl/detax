@@ -109,3 +109,75 @@ async def get_context_channels(
     except Exception as e:
         logger.error(f"Error getting context channels: {e}")
         raise HTTPException(status_code=500, detail="Nie udało się wyliczyć kanałów kontekstowych")
+
+
+@router.get("/context/hierarchy")
+async def get_context_hierarchy():
+    """Zwraca pełną hierarchię: Kontakty -> Projekty -> Pliki (JSON).
+
+    Struktura:
+    {
+      "contacts": [
+        {
+          "name": "Kontrahent",
+          "projects": [
+            {
+              "id": 1,
+              "name": "Umowa sprzedaży",
+              "description": "...",
+              "files": [ {"id": 10, "filename": "umowa.pdf", "path": "..."}, ... ]
+            }
+          ]
+        },
+        ...
+      ]
+    }
+    """
+    try:
+        conn = _get_connection()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            # Pobierz wszystkie projekty
+            cur.execute(
+                "SELECT id, name, description, contact FROM projects ORDER BY contact, id DESC"
+            )
+            projects = [dict(r) for r in cur.fetchall()]
+
+            # Pobierz wszystkie pliki
+            cur.execute(
+                "SELECT id, project_id, filename, path FROM project_files ORDER BY id"
+            )
+            files = [dict(r) for r in cur.fetchall()]
+        conn.close()
+
+        files_by_project: Dict[int, List[Dict[str, Any]]] = {}
+        for f in files:
+            files_by_project.setdefault(f["project_id"], []).append(
+                {
+                    "id": f["id"],
+                    "filename": f.get("filename"),
+                    "path": f.get("path"),
+                }
+            )
+
+        contacts_map: Dict[str, Dict[str, Any]] = {}
+        for p in projects:
+            contact_name = p.get("contact") or "Inne";
+            if contact_name not in contacts_map:
+                contacts_map[contact_name] = {"name": contact_name, "projects": []}
+
+            contacts_map[contact_name]["projects"].append(
+                {
+                    "id": p["id"],
+                    "name": p.get("name"),
+                    "description": p.get("description"),
+                    "files": files_by_project.get(p["id"], []),
+                }
+            )
+
+        contacts_list = list(contacts_map.values())
+
+        return {"contacts": contacts_list}
+
+    except Exception as e:
+        logger.error(f"Error getting context hierarchy: {e}")
+        raise HTTPException(status_code=500, detail="Nie udało się pobrać hierarchii kontekstu")

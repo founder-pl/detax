@@ -495,6 +495,11 @@ body.dashboard-edit .dashboard-module::after {
     background: var(--bg-tertiary);
 }
 
+.file-item.active {
+    background: var(--accent);
+    color: #ffffff;
+}
+
 .module-btn {
     display: flex;
     align-items: center;

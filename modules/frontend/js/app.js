@@ -171,27 +171,6 @@ async function deleteDocument() {
         alert('Nie udało się usunąć dokumentu.');
     }
 }
-};
-
-const PROJECT_FILES = {
-    'projekt-1': [
-        'ksef_terminy.pdf',
-        'instrukcja_e_faktury.docx',
-        'umowa_klient_A.pdf'
-    ],
-    'projekt-2': [
-        'analiza_umowy_b2b.pdf',
-        'checklista_b2b.xlsx'
-    ],
-    'projekt-3': [
-        'vat_oss_instrukcja.pdf',
-        'jpk_vat_przyklad.xlsx'
-    ],
-    default: [
-        'notatki_projektowe.txt'
-    ]
-};
-
 // State
 let currentModule = 'default';
 let isLoading = false;
@@ -390,14 +369,20 @@ async function updateContextChannels() {
         if (currentProjectId != null) params.append('project_id', String(currentProjectId));
         if (currentFileId != null) params.append('file_id', String(currentFileId));
 
-        if (![...params.keys()].length) return; // brak kontekstu
+        if (![...params.keys()].length) {
+            resetContextChannels();
+            return; // brak kontekstu
+        }
 
         const resp = await fetch(`${API_URL}/context/channels?${params.toString()}`);
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const data = await resp.json();
 
         const channels = data.channels || [];
-        if (channels.length === 0) return;
+        if (channels.length === 0) {
+            resetContextChannels();
+            return;
+        }
 
         // wybierz pierwszy kanał jako aktywny moduł
         const first = channels[0];
@@ -415,7 +400,19 @@ async function updateContextChannels() {
 
     } catch (err) {
         console.error('Nie udało się pobrać kanałów kontekstowych:', err);
+        resetContextChannels();
     }
+}
+
+function resetContextChannels() {
+    // Przywróć moduł ogólny i wyczyść rekomendacje
+    setModule('default');
+    document.querySelectorAll('.channel-item').forEach(item => {
+        const mod = item.dataset.module;
+        if (!mod) return;
+        item.classList.remove('recommended');
+        item.classList.toggle('active', mod === 'default');
+    });
 }
 
 async function initDashboardLayout() {
