@@ -4,7 +4,8 @@ include .env
 export
 
 .PHONY: help up start stop down restart rebuild logs api-logs frontend-logs ps build clean \
-	package package-upload publish publish-test test pull-model docs-api docs-api-watch
+	package package-upload publish publish-test test pull-model docs-api docs-api-watch \
+	cli cli-health cli-chat cli-docs cli-projects cli-sources cli-test frontend-build
 
 help:
 	@echo "Dostępne komendy:"
@@ -27,6 +28,15 @@ help:
 	@echo "  make package-upload - wyślij paczkę na PyPI/TestPyPI (wymaga twine)"
 	@echo "  make publish      - zbuduj i wyślij paczkę na PyPI (wymaga twine)"
 	@echo "  make publish-test - zbuduj i wyślij paczkę na TestPyPI (wymaga twine)"
+	@echo ""
+	@echo "CLI (Shell DSL):"
+	@echo "  make cli          - tryb interaktywny CLI"
+	@echo "  make cli-health   - sprawdź stan systemu"
+	@echo "  make cli-docs     - lista dokumentów"
+	@echo "  make cli-projects - lista projektów"
+	@echo "  make cli-sources  - lista źródeł danych"
+	@echo "  make cli-test     - uruchom testy E2E"
+	@echo "  make frontend-build - zbuduj TypeScript frontend"
 
 up:
 	docker compose up -d
@@ -91,4 +101,38 @@ docs-api:
 
 docs-api-watch:
 	python scripts/generate_api_docs.py --watch
+
+# --- CLI (Shell DSL for CQRS API) ---
+
+cli:
+	@./scripts/bielik-cli.sh interactive
+
+cli-health:
+	@./scripts/bielik-cli.sh health
+
+cli-status:
+	@./scripts/bielik-cli.sh status
+
+cli-docs:
+	@./scripts/bielik-cli.sh doc:list
+
+cli-projects:
+	@./scripts/bielik-cli.sh project:list
+
+cli-sources:
+	@./scripts/bielik-cli.sh sources:list
+
+cli-legal:
+	@./scripts/bielik-cli.sh sources:legal
+
+cli-test:
+	@python3 tests/e2e/test_documents_flow.py
+
+# --- Frontend Build ---
+
+frontend-build:
+	cd modules/frontend && docker run --rm -v $$(pwd):/app -w /app node:20-alpine sh -c "npm install && npm run build:dev"
+
+frontend-build-prod:
+	cd modules/frontend && docker run --rm -v $$(pwd):/app -w /app node:20-alpine sh -c "npm install && npm run build"
 

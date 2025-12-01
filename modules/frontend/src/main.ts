@@ -15,6 +15,8 @@ import { Header } from './components/Header';
 import { ChatPanel } from './components/ChatPanel';
 import { ContextPanel } from './components/ContextPanel';
 import { SourcesPanel } from './components/SourcesPanel';
+import { DocumentsPanel } from './components/DocumentsPanel';
+import { ProjectsPanel } from './components/ProjectsPanel';
 import { EventBus } from './core/Component';
 
 interface AppConfig {
@@ -116,8 +118,10 @@ export function bootstrap(): void {
 bootstrap();
 
 // Export for external use
-export { EventBus } from './core/Component';
+export { EventBus, api } from './core/Component';
 export { Header } from './components/Header';
 export { ChatPanel } from './components/ChatPanel';
 export { ContextPanel } from './components/ContextPanel';
 export { SourcesPanel } from './components/SourcesPanel';
+export { DocumentsPanel } from './components/DocumentsPanel';
+export { ProjectsPanel } from './components/ProjectsPanel';

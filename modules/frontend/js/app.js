@@ -1694,6 +1694,815 @@
     }
   };
 
+  // src/components/DocumentsPanel.ts
+  var DocumentsPanel = class extends Component {
+    constructor() {
+      super(...arguments);
+      this.documents = [];
+      this.selectedDocument = null;
+      this.events = [];
+      this.stats = null;
+      this.viewMode = "list";
+      this.isLoading = false;
+    }
+    render() {
+      return `
+      <div class="documents-panel-component">
+        <div class="documents-header">
+          <h3>\u{1F4DA} Dokumenty (CQRS)</h3>
+          <div class="documents-actions">
+            <button type="button" class="btn-icon" id="doc-refresh" title="Od\u015Bwie\u017C">\u{1F504}</button>
+            <button type="button" class="btn-icon" id="doc-new" title="Nowy dokument">\u2795</button>
+            <button type="button" class="btn-icon ${this.viewMode === "events" ? "active" : ""}" 
+                    id="doc-toggle-events" title="Historia zdarze\u0144">\u{1F4DC}</button>
+          </div>
+        </div>
+
+        <div class="documents-stats" id="doc-stats">
+          ${this.renderStats()}
+        </div>
+
+        <div class="documents-content">
+          ${this.viewMode === "list" ? this.renderList() : ""}
+          ${this.viewMode === "edit" ? this.renderEditor() : ""}
+          ${this.viewMode === "events" ? this.renderEvents() : ""}
+        </div>
+      </div>
+    `;
+    }
+    renderStats() {
+      if (!this.stats) {
+        return '<div class="stats-loading">\u0141adowanie...</div>';
+      }
+      return `
+      <div class="stats-row">
+        <span class="stat-item">
+          <strong>${this.stats.total_documents}</strong> dokument\xF3w
+        </span>
+        <span class="stat-item">
+          <strong>${this.stats.total_chunks}</strong> chunk\xF3w
+        </span>
+      </div>
+      <div class="stats-categories">
+        ${this.stats.categories.map((c) => `
+          <span class="category-badge ${c.category}">${c.category}: ${c.count}</span>
+        `).join("")}
+      </div>
+    `;
+    }
+    renderList() {
+      if (this.isLoading) {
+        return '<div class="loading">\u0141adowanie dokument\xF3w...</div>';
+      }
+      if (!this.documents.length) {
+        return '<div class="empty">Brak dokument\xF3w. Kliknij \u2795 aby doda\u0107 nowy.</div>';
+      }
+      return `
+      <ul class="documents-list-component">
+        ${this.documents.map((doc) => `
+          <li class="document-item ${this.selectedDocument?.id === doc.id ? "selected" : ""}"
+              data-doc-id="${doc.id}">
+            <div class="document-info">
+              <span class="document-title">${this.escapeHtml(doc.title)}</span>
+              <span class="document-category ${doc.category}">${doc.category}</span>
+            </div>
+            <div class="document-meta">
+              ${doc.source ? `<span class="document-source">${this.escapeHtml(doc.source)}</span>` : ""}
+            </div>
+          </li>
+        `).join("")}
+      </ul>
+    `;
+    }
+    renderEditor() {
+      const doc = this.selectedDocument;
+      const isNew = !doc?.id;
+      return `
+      <form class="document-editor-form" id="doc-editor-form">
+        <div class="form-group">
+          <label for="doc-title-input">Tytu\u0142</label>
+          <input type="text" id="doc-title-input" class="form-input" 
+                 value="${doc ? this.escapeHtml(doc.title) : ""}" 
+                 placeholder="Tytu\u0142 dokumentu" required>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="doc-category-input">Kategoria</label>
+            <select id="doc-category-input" class="form-select" required>
+              <option value="">Wybierz...</option>
+              <option value="ksef" ${doc?.category === "ksef" ? "selected" : ""}>KSeF</option>
+              <option value="b2b" ${doc?.category === "b2b" ? "selected" : ""}>B2B</option>
+              <option value="zus" ${doc?.category === "zus" ? "selected" : ""}>ZUS</option>
+              <option value="vat" ${doc?.category === "vat" ? "selected" : ""}>VAT</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="doc-source-input">\u0179r\xF3d\u0142o</label>
+            <input type="text" id="doc-source-input" class="form-input"
+                   value="${doc?.source ? this.escapeHtml(doc.source) : ""}"
+                   placeholder="np. Dz.U. 2024 poz. 123">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="doc-content-input">Tre\u015B\u0107</label>
+          <textarea id="doc-content-input" class="form-textarea" rows="10" 
+                    placeholder="Tre\u015B\u0107 dokumentu..." required>${doc ? this.escapeHtml(doc.content) : ""}</textarea>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn secondary" id="doc-cancel">Anuluj</button>
+          ${!isNew ? `<button type="button" class="btn danger" id="doc-delete">Usu\u0144</button>` : ""}
+          <button type="submit" class="btn primary">${isNew ? "Utw\xF3rz" : "Zapisz"}</button>
+        </div>
+
+        ${!isNew ? `
+          <div class="editor-events-preview">
+            <h4>\u{1F4DC} Ostatnie zdarzenia</h4>
+            <ul class="events-mini-list">
+              ${this.events.slice(0, 3).map((e) => `
+                <li class="event-mini">
+                  <span class="event-type">${e.event_type}</span>
+                  <span class="event-time">${this.formatTime(e.created_at)}</span>
+                </li>
+              `).join("")}
+            </ul>
+            <button type="button" class="btn-link" id="doc-show-all-events">
+              Zobacz wszystkie zdarzenia \u2192
+            </button>
+          </div>
+        ` : ""}
+      </form>
+    `;
+    }
+    renderEvents() {
+      if (!this.selectedDocument) {
+        return '<div class="empty">Wybierz dokument, aby zobaczy\u0107 histori\u0119 zdarze\u0144</div>';
+      }
+      if (!this.events.length) {
+        return '<div class="empty">Brak zdarze\u0144 dla tego dokumentu</div>';
+      }
+      return `
+      <div class="events-panel">
+        <div class="events-header">
+          <h4>\u{1F4DC} Historia zdarze\u0144: ${this.escapeHtml(this.selectedDocument.title)}</h4>
+          <button type="button" class="btn secondary btn-sm" id="events-back">\u2190 Wr\xF3\u0107</button>
+        </div>
+        <ul class="events-list">
+          ${this.events.map((event) => `
+            <li class="event-item ${event.event_type.toLowerCase()}">
+              <div class="event-icon">${this.getEventIcon(event.event_type)}</div>
+              <div class="event-details">
+                <div class="event-header">
+                  <span class="event-type">${event.event_type}</span>
+                  <span class="event-time">${this.formatTime(event.created_at)}</span>
+                </div>
+                <div class="event-payload">
+                  <pre>${JSON.stringify(event.payload, null, 2)}</pre>
+                </div>
+              </div>
+            </li>
+          `).join("")}
+        </ul>
+      </div>
+    `;
+    }
+    getEventIcon(eventType) {
+      const icons = {
+        "DocumentCreated": "\u2728",
+        "DocumentUpdated": "\u270F\uFE0F",
+        "DocumentDeleted": "\u{1F5D1}\uFE0F"
+      };
+      return icons[eventType] || "\u{1F4CC}";
+    }
+    formatTime(isoString) {
+      const date = new Date(isoString);
+      return date.toLocaleString("pl-PL", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    }
+    async afterMount() {
+      await Promise.all([
+        this.loadDocuments(),
+        this.loadStats()
+      ]);
+    }
+    async loadDocuments() {
+      this.isLoading = true;
+      try {
+        this.documents = await api.get("/documents");
+        this.updateList();
+      } catch (e) {
+        console.error("Error loading documents:", e);
+      } finally {
+        this.isLoading = false;
+      }
+    }
+    async loadStats() {
+      try {
+        this.stats = await api.get("/documents/stats");
+        this.updateStats();
+      } catch (e) {
+        console.error("Error loading stats:", e);
+      }
+    }
+    async loadEvents(docId) {
+      try {
+        this.events = await api.get(`/events/documents/${docId}`);
+      } catch (e) {
+        console.error("Error loading events:", e);
+        this.events = [];
+      }
+    }
+    updateList() {
+      const content = this.$(".documents-content");
+      if (content && this.viewMode === "list") {
+        content.innerHTML = this.renderList();
+        this.bindListEvents();
+      }
+    }
+    updateStats() {
+      const stats = this.$("#doc-stats");
+      if (stats) {
+        stats.innerHTML = this.renderStats();
+      }
+    }
+    updateContent() {
+      const content = this.$(".documents-content");
+      if (!content) return;
+      if (this.viewMode === "list") {
+        content.innerHTML = this.renderList();
+        this.bindListEvents();
+      } else if (this.viewMode === "edit") {
+        content.innerHTML = this.renderEditor();
+        this.bindEditorEvents();
+      } else if (this.viewMode === "events") {
+        content.innerHTML = this.renderEvents();
+        this.bindEventsEvents();
+      }
+    }
+    bindEvents() {
+      this.$("#doc-refresh")?.addEventListener("click", () => this.loadDocuments());
+      this.$("#doc-new")?.addEventListener("click", () => this.newDocument());
+      this.$("#doc-toggle-events")?.addEventListener("click", () => this.toggleEventsView());
+      this.bindListEvents();
+    }
+    bindListEvents() {
+      this.$$(".document-item").forEach((item) => {
+        item.addEventListener("click", async () => {
+          const docId = parseInt(item.dataset.docId || "0");
+          await this.selectDocument(docId);
+        });
+      });
+    }
+    bindEditorEvents() {
+      const form = this.$("#doc-editor-form");
+      form?.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        await this.saveDocument();
+      });
+      this.$("#doc-cancel")?.addEventListener("click", () => {
+        this.viewMode = "list";
+        this.selectedDocument = null;
+        this.updateContent();
+      });
+      this.$("#doc-delete")?.addEventListener("click", async () => {
+        if (this.selectedDocument && confirm("Czy na pewno chcesz usun\u0105\u0107 ten dokument?")) {
+          await this.deleteDocument(this.selectedDocument.id);
+        }
+      });
+      this.$("#doc-show-all-events")?.addEventListener("click", () => {
+        this.viewMode = "events";
+        this.updateContent();
+      });
+    }
+    bindEventsEvents() {
+      this.$("#events-back")?.addEventListener("click", () => {
+        this.viewMode = "edit";
+        this.updateContent();
+      });
+    }
+    async selectDocument(docId) {
+      try {
+        this.selectedDocument = await api.get(`/documents/${docId}`);
+        await this.loadEvents(docId);
+        this.viewMode = "edit";
+        this.updateContent();
+      } catch (e) {
+        console.error("Error selecting document:", e);
+      }
+    }
+    newDocument() {
+      this.selectedDocument = {
+        id: 0,
+        title: "",
+        source: null,
+        category: "",
+        content: ""
+      };
+      this.events = [];
+      this.viewMode = "edit";
+      this.updateContent();
+    }
+    async saveDocument() {
+      const title = this.$("#doc-title-input")?.value;
+      const category = this.$("#doc-category-input")?.value;
+      const source = this.$("#doc-source-input")?.value;
+      const content = this.$("#doc-content-input")?.value;
+      if (!title || !category || !content) {
+        alert("Wype\u0142nij wszystkie wymagane pola");
+        return;
+      }
+      try {
+        if (this.selectedDocument?.id) {
+          await api.post("/commands/documents/update", {
+            id: this.selectedDocument.id,
+            title,
+            category,
+            content,
+            source: source || null
+          });
+          EventBus.emit("document:updated", this.selectedDocument.id);
+        } else {
+          const result = await api.post("/commands/documents/create", {
+            title,
+            category,
+            content,
+            source: source || null
+          });
+          EventBus.emit("document:created", result.id);
+        }
+        await this.loadDocuments();
+        await this.loadStats();
+        this.viewMode = "list";
+        this.selectedDocument = null;
+        this.updateContent();
+      } catch (e) {
+        console.error("Error saving document:", e);
+        alert("B\u0142\u0105d zapisu dokumentu");
+      }
+    }
+    async deleteDocument(docId) {
+      try {
+        await api.post("/commands/documents/delete", { id: docId });
+        EventBus.emit("document:deleted", docId);
+        await this.loadDocuments();
+        await this.loadStats();
+        this.viewMode = "list";
+        this.selectedDocument = null;
+        this.updateContent();
+      } catch (e) {
+        console.error("Error deleting document:", e);
+        alert("B\u0142\u0105d usuwania dokumentu");
+      }
+    }
+    toggleEventsView() {
+      if (this.viewMode === "events") {
+        this.viewMode = this.selectedDocument ? "edit" : "list";
+      } else {
+        this.viewMode = "events";
+      }
+      this.updateContent();
+      const btn = this.$("#doc-toggle-events");
+      btn?.classList.toggle("active", this.viewMode === "events");
+    }
+    escapeHtml(text) {
+      return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+  };
+
+  // src/components/ProjectsPanel.ts
+  var ProjectsPanel = class extends Component {
+    constructor() {
+      super(...arguments);
+      this.projects = [];
+      this.contacts = [];
+      this.selectedProject = null;
+      this.projectFiles = [];
+      this.events = [];
+      this.viewMode = "list";
+      this.filterContact = null;
+    }
+    render() {
+      return `
+      <div class="projects-panel-component">
+        <div class="projects-header">
+          <h3>\u{1F4C1} Projekty (CQRS)</h3>
+          <div class="projects-actions">
+            <button type="button" class="btn-icon" id="proj-refresh" title="Od\u015Bwie\u017C">\u{1F504}</button>
+            <button type="button" class="btn-icon" id="proj-new" title="Nowy projekt">\u2795</button>
+          </div>
+        </div>
+
+        <div class="projects-filter">
+          <select id="contact-filter" class="filter-select">
+            <option value="">Wszystkie kontakty</option>
+            ${this.contacts.map((c) => `
+              <option value="${this.escapeHtml(c)}" ${this.filterContact === c ? "selected" : ""}>
+                ${this.escapeHtml(c)}
+              </option>
+            `).join("")}
+          </select>
+        </div>
+
+        <div class="projects-content">
+          ${this.viewMode === "list" ? this.renderList() : ""}
+          ${this.viewMode === "edit" ? this.renderEditor() : ""}
+          ${this.viewMode === "files" ? this.renderFiles() : ""}
+        </div>
+      </div>
+    `;
+    }
+    renderList() {
+      const filtered = this.filterContact ? this.projects.filter((p) => p.contact === this.filterContact) : this.projects;
+      if (!filtered.length) {
+        return '<div class="empty">Brak projekt\xF3w. Kliknij \u2795 aby doda\u0107 nowy.</div>';
+      }
+      const grouped = this.groupByContact(filtered);
+      return `
+      <div class="projects-grouped">
+        ${Object.entries(grouped).map(([contact, projects]) => `
+          <div class="contact-group">
+            <div class="contact-header">
+              <span class="contact-icon">\u{1F464}</span>
+              <span class="contact-name">${this.escapeHtml(contact || "Bez kontaktu")}</span>
+              <span class="contact-count">${projects.length}</span>
+            </div>
+            <ul class="projects-list-component">
+              ${projects.map((proj) => `
+                <li class="project-item ${this.selectedProject?.id === proj.id ? "selected" : ""}"
+                    data-proj-id="${proj.id}">
+                  <span class="project-icon">\u{1F4CB}</span>
+                  <div class="project-info">
+                    <span class="project-name">${this.escapeHtml(proj.name)}</span>
+                    <span class="project-desc">${this.escapeHtml(proj.description || "")}</span>
+                  </div>
+                </li>
+              `).join("")}
+            </ul>
+          </div>
+        `).join("")}
+      </div>
+    `;
+    }
+    renderEditor() {
+      const proj = this.selectedProject;
+      const isNew = !proj?.id;
+      return `
+      <form class="project-editor-form" id="proj-editor-form">
+        <div class="form-group">
+          <label for="proj-name-input">Nazwa projektu</label>
+          <input type="text" id="proj-name-input" class="form-input"
+                 value="${proj ? this.escapeHtml(proj.name) : ""}"
+                 placeholder="Nazwa projektu" required>
+        </div>
+
+        <div class="form-group">
+          <label for="proj-contact-input">Kontakt</label>
+          <input type="text" id="proj-contact-input" class="form-input"
+                 value="${proj?.contact ? this.escapeHtml(proj.contact) : ""}"
+                 placeholder="np. Kontrahent, Ksi\u0119gowa..."
+                 list="contacts-datalist">
+          <datalist id="contacts-datalist">
+            ${this.contacts.map((c) => `<option value="${this.escapeHtml(c)}">`).join("")}
+          </datalist>
+        </div>
+
+        <div class="form-group">
+          <label for="proj-desc-input">Opis</label>
+          <textarea id="proj-desc-input" class="form-textarea" rows="4"
+                    placeholder="Opis projektu...">${proj?.description ? this.escapeHtml(proj.description) : ""}</textarea>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn secondary" id="proj-cancel">Anuluj</button>
+          ${!isNew ? `
+            <button type="button" class="btn info" id="proj-files">\u{1F4C4} Pliki</button>
+            <button type="button" class="btn danger" id="proj-delete">Usu\u0144</button>
+          ` : ""}
+          <button type="submit" class="btn primary">${isNew ? "Utw\xF3rz" : "Zapisz"}</button>
+        </div>
+
+        ${!isNew ? `
+          <div class="editor-events-preview">
+            <h4>\u{1F4DC} Historia zdarze\u0144</h4>
+            <ul class="events-mini-list">
+              ${this.events.slice(0, 3).map((e) => `
+                <li class="event-mini">
+                  <span class="event-type">${e.event_type}</span>
+                  <span class="event-time">${this.formatTime(e.created_at)}</span>
+                </li>
+              `).join("")}
+            </ul>
+          </div>
+        ` : ""}
+      </form>
+    `;
+    }
+    renderFiles() {
+      if (!this.selectedProject) {
+        return '<div class="empty">Wybierz projekt</div>';
+      }
+      return `
+      <div class="files-panel">
+        <div class="files-header">
+          <h4>\u{1F4C4} Pliki projektu: ${this.escapeHtml(this.selectedProject.name)}</h4>
+          <button type="button" class="btn secondary btn-sm" id="files-back">\u2190 Wr\xF3\u0107</button>
+        </div>
+
+        <form class="add-file-form" id="add-file-form">
+          <div class="form-row">
+            <input type="text" id="file-name-input" class="form-input" 
+                   placeholder="Nazwa pliku (np. umowa.pdf)">
+            <input type="text" id="file-path-input" class="form-input"
+                   placeholder="\u015Acie\u017Cka (opcjonalna)">
+            <button type="submit" class="btn primary btn-sm">Dodaj</button>
+          </div>
+        </form>
+
+        <ul class="files-list-component">
+          ${this.projectFiles.map((file) => `
+            <li class="file-item" data-file-id="${file.id}">
+              <span class="file-icon">${this.getFileIcon(file.filename)}</span>
+              <div class="file-info">
+                <span class="file-name">${this.escapeHtml(file.filename)}</span>
+                ${file.path ? `<span class="file-path">${this.escapeHtml(file.path)}</span>` : ""}
+              </div>
+              <button type="button" class="btn-icon danger" data-action="remove-file" data-file-id="${file.id}">\u{1F5D1}\uFE0F</button>
+            </li>
+          `).join("")}
+          ${!this.projectFiles.length ? '<li class="empty">Brak plik\xF3w</li>' : ""}
+        </ul>
+      </div>
+    `;
+    }
+    groupByContact(projects) {
+      return projects.reduce((acc, proj) => {
+        const contact = proj.contact || "";
+        if (!acc[contact]) acc[contact] = [];
+        acc[contact].push(proj);
+        return acc;
+      }, {});
+    }
+    getFileIcon(filename) {
+      const ext = filename.split(".").pop()?.toLowerCase();
+      const icons = {
+        pdf: "\u{1F4D5}",
+        doc: "\u{1F4D8}",
+        docx: "\u{1F4D8}",
+        xls: "\u{1F4D7}",
+        xlsx: "\u{1F4D7}",
+        txt: "\u{1F4C4}",
+        jpg: "\u{1F5BC}\uFE0F",
+        png: "\u{1F5BC}\uFE0F",
+        zip: "\u{1F4E6}"
+      };
+      return icons[ext || ""] || "\u{1F4C4}";
+    }
+    formatTime(isoString) {
+      const date = new Date(isoString);
+      return date.toLocaleString("pl-PL", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    }
+    async afterMount() {
+      await this.loadProjects();
+    }
+    async loadProjects() {
+      try {
+        this.projects = await api.get("/projects");
+        this.contacts = [...new Set(this.projects.map((p) => p.contact).filter(Boolean))];
+        this.updateContent();
+      } catch (e) {
+        console.error("Error loading projects:", e);
+      }
+    }
+    async loadProjectFiles(projectId) {
+      try {
+        this.projectFiles = await api.get(`/projects/${projectId}/files`);
+      } catch (e) {
+        console.error("Error loading project files:", e);
+        this.projectFiles = [];
+      }
+    }
+    async loadEvents(projectId) {
+      try {
+        this.events = await api.get(`/events/projects/${projectId}`);
+      } catch (e) {
+        console.error("Error loading events:", e);
+        this.events = [];
+      }
+    }
+    updateContent() {
+      const content = this.$(".projects-content");
+      const filter = this.$(".projects-filter");
+      if (filter) {
+        filter.innerHTML = `
+        <select id="contact-filter" class="filter-select">
+          <option value="">Wszystkie kontakty</option>
+          ${this.contacts.map((c) => `
+            <option value="${this.escapeHtml(c)}" ${this.filterContact === c ? "selected" : ""}>
+              ${this.escapeHtml(c)}
+            </option>
+          `).join("")}
+        </select>
+      `;
+        this.bindFilterEvents();
+      }
+      if (!content) return;
+      if (this.viewMode === "list") {
+        content.innerHTML = this.renderList();
+        this.bindListEvents();
+      } else if (this.viewMode === "edit") {
+        content.innerHTML = this.renderEditor();
+        this.bindEditorEvents();
+      } else if (this.viewMode === "files") {
+        content.innerHTML = this.renderFiles();
+        this.bindFilesEvents();
+      }
+    }
+    bindEvents() {
+      this.$("#proj-refresh")?.addEventListener("click", () => this.loadProjects());
+      this.$("#proj-new")?.addEventListener("click", () => this.newProject());
+      this.bindFilterEvents();
+      this.bindListEvents();
+    }
+    bindFilterEvents() {
+      const filter = this.$("#contact-filter");
+      filter?.addEventListener("change", () => {
+        this.filterContact = filter.value || null;
+        this.updateContent();
+      });
+    }
+    bindListEvents() {
+      this.$$(".project-item").forEach((item) => {
+        item.addEventListener("click", async () => {
+          const projId = parseInt(item.dataset.projId || "0");
+          await this.selectProject(projId);
+        });
+      });
+    }
+    bindEditorEvents() {
+      const form = this.$("#proj-editor-form");
+      form?.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        await this.saveProject();
+      });
+      this.$("#proj-cancel")?.addEventListener("click", () => {
+        this.viewMode = "list";
+        this.selectedProject = null;
+        this.updateContent();
+      });
+      this.$("#proj-files")?.addEventListener("click", async () => {
+        if (this.selectedProject) {
+          await this.loadProjectFiles(this.selectedProject.id);
+          this.viewMode = "files";
+          this.updateContent();
+        }
+      });
+      this.$("#proj-delete")?.addEventListener("click", async () => {
+        if (this.selectedProject && confirm("Czy na pewno chcesz usun\u0105\u0107 ten projekt?")) {
+          await this.deleteProject(this.selectedProject.id);
+        }
+      });
+    }
+    bindFilesEvents() {
+      this.$("#files-back")?.addEventListener("click", () => {
+        this.viewMode = "edit";
+        this.updateContent();
+      });
+      const form = this.$("#add-file-form");
+      form?.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        await this.addFile();
+      });
+      this.$$('[data-action="remove-file"]').forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const fileId = parseInt(btn.dataset.fileId || "0");
+          if (fileId && confirm("Usun\u0105\u0107 plik?")) {
+            await this.removeFile(fileId);
+          }
+        });
+      });
+    }
+    async selectProject(projId) {
+      try {
+        this.selectedProject = await api.get(`/projects/${projId}`);
+        await this.loadEvents(projId);
+        this.viewMode = "edit";
+        this.updateContent();
+        EventBus.emit("project:selected", this.selectedProject);
+      } catch (e) {
+        console.error("Error selecting project:", e);
+      }
+    }
+    newProject() {
+      this.selectedProject = {
+        id: 0,
+        name: "",
+        description: "",
+        contact: ""
+      };
+      this.events = [];
+      this.viewMode = "edit";
+      this.updateContent();
+    }
+    async saveProject() {
+      const name = this.$("#proj-name-input")?.value;
+      const contact = this.$("#proj-contact-input")?.value;
+      const description = this.$("#proj-desc-input")?.value;
+      if (!name) {
+        alert("Podaj nazw\u0119 projektu");
+        return;
+      }
+      try {
+        if (this.selectedProject?.id) {
+          await api.post("/commands/projects/update", {
+            id: this.selectedProject.id,
+            name,
+            contact,
+            description
+          });
+          EventBus.emit("project:updated", this.selectedProject.id);
+        } else {
+          const result = await api.post("/commands/projects/create", {
+            name,
+            contact,
+            description
+          });
+          EventBus.emit("project:created", result.id);
+        }
+        await this.loadProjects();
+        this.viewMode = "list";
+        this.selectedProject = null;
+        this.updateContent();
+      } catch (e) {
+        console.error("Error saving project:", e);
+        alert("B\u0142\u0105d zapisu projektu");
+      }
+    }
+    async deleteProject(projId) {
+      try {
+        await api.post("/commands/projects/delete", { id: projId });
+        EventBus.emit("project:deleted", projId);
+        await this.loadProjects();
+        this.viewMode = "list";
+        this.selectedProject = null;
+        this.updateContent();
+      } catch (e) {
+        console.error("Error deleting project:", e);
+        alert("B\u0142\u0105d usuwania projektu");
+      }
+    }
+    async addFile() {
+      if (!this.selectedProject) return;
+      const filename = this.$("#file-name-input")?.value;
+      const path = this.$("#file-path-input")?.value;
+      if (!filename) {
+        alert("Podaj nazw\u0119 pliku");
+        return;
+      }
+      try {
+        await api.post("/commands/projects/files/add", {
+          project_id: this.selectedProject.id,
+          filename,
+          path: path || null
+        });
+        await this.loadProjectFiles(this.selectedProject.id);
+        this.updateContent();
+        EventBus.emit("file:added", { projectId: this.selectedProject.id, filename });
+      } catch (e) {
+        console.error("Error adding file:", e);
+        alert("B\u0142\u0105d dodawania pliku");
+      }
+    }
+    async removeFile(fileId) {
+      try {
+        await api.post("/commands/projects/files/remove", { id: fileId });
+        if (this.selectedProject) {
+          await this.loadProjectFiles(this.selectedProject.id);
+          this.updateContent();
+        }
+        EventBus.emit("file:removed", fileId);
+      } catch (e) {
+        console.error("Error removing file:", e);
+        alert("B\u0142\u0105d usuwania pliku");
+      }
+    }
+    escapeHtml(text) {
+      return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+  };
+
   // src/main.ts
   var config = {
     // Set to true to use new component architecture
