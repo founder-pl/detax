@@ -4,7 +4,7 @@ include .env
 export
 
 .PHONY: help up start stop down restart rebuild logs api-logs frontend-logs ps build clean \
-	package package-upload publish publish-test test pull-model
+	package package-upload publish publish-test test pull-model docs-api docs-api-watch
 
 help:
 	@echo "Dostępne komendy:"
@@ -21,6 +21,8 @@ help:
 	@echo "  make ps           - status kontenerów"
 	@echo "  make pull-model   - pobierz model z .env (OLLAMA_MODEL)"
 	@echo "  make clean        - usuń dane (PostgreSQL), modele Ollama zostają"
+	@echo "  make docs-api     - wygeneruj OpenAPI JSON do katalogu docs/"
+	@echo "  make docs-api-watch - generuj OpenAPI przy zmianach w modules/api"
 	@echo "  make package      - zbuduj paczkę Pythona dla API (sdist+wheel)"
 	@echo "  make package-upload - wyślij paczkę na PyPI/TestPyPI (wymaga twine)"
 	@echo "  make publish      - zbuduj i wyślij paczkę na PyPI (wymaga twine)"
@@ -82,4 +84,10 @@ publish: package
 
 publish-test: package
 	cd modules/api && twine upload --repository testpypi dist/*
+
+docs-api:
+	python scripts/generate_api_docs.py
+
+docs-api-watch:
+	python scripts/generate_api_docs.py --watch
 
