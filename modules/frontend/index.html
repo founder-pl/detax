@@ -22,56 +22,45 @@
             </div>
         </header>
 
-        <!-- Module selector + edit mode toggle -->
-        <nav class="modules">
-            <button class="module-btn active" data-module="default">
-                <span class="module-icon">💬</span>
-                <span class="module-name">Ogólne</span>
-            </button>
-            <button class="module-btn" data-module="ksef">
-                <span class="module-icon">📄</span>
-                <span class="module-name">KSeF</span>
-            </button>
-            <button class="module-btn" data-module="b2b">
-                <span class="module-icon">💼</span>
-                <span class="module-name">B2B</span>
-            </button>
-            <button class="module-btn" data-module="zus">
-                <span class="module-icon">🏥</span>
-                <span class="module-name">ZUS</span>
-            </button>
-            <button class="module-btn" data-module="vat">
-                <span class="module-icon">💰</span>
-                <span class="module-name">VAT</span>
-            </button>
-            <button class="module-btn edit-toggle" id="edit-dashboard-toggle" type="button" aria-pressed="false">
-                <span class="module-icon">⚙️</span>
-                <span class="module-name">Edycja</span>
-            </button>
-        </nav>
+        <!-- Module selector + edit mode toggle now w osobnym module dashboardu -->
 
         <div class="main-layout">
             <!-- LEWA STRONA: moduły dashboardu -->
             <div class="panel-left" id="panel-left">
-                <div class="dashboard-module" data-module-id="sidebar">
-                    <!-- Kontakty i Kanały -->
+                <div class="dashboard-module" data-module-id="topics">
+                    <nav class="modules">
+                        <button class="module-btn edit-toggle" id="edit-dashboard-toggle" type="button" aria-pressed="false">
+                            <span class="module-icon">⚙️</span>
+                            <span class="module-name">Edycja</span>
+                        </button>
+                    </nav>
+                </div>
+
+                <div class="dashboard-module" data-module-id="contacts">
                     <aside class="sidebar-section-container">
                         <div class="sidebar-section">
                             <h3>👥 Kontakty</h3>
                             <ul class="contacts-list">
-                                <li class="contact-item active">Klient A</li>
-                                <li class="contact-item">Klient B</li>
-                                <li class="contact-item">Biuro księgowe</li>
+                                <li class="contact-item active">Kontrahent</li>
+                                <li class="contact-item">Księgowa</li>
+                                <li class="contact-item">Doradca podatkowy</li>
+                                <li class="contact-item">Prawnik</li>
+                                <li class="contact-item">Urzędnik</li>
                             </ul>
                         </div>
+                    </aside>
+                </div>
+
+                <div class="dashboard-module" data-module-id="channels">
+                    <aside class="sidebar-section-container">
                         <div class="sidebar-section">
                             <h3>📢 Kanały</h3>
                             <ul class="channels-list">
-                                <li class="channel-item active" data-module="default"># ogólne</li>
+                                <li class="channel-item" data-module="default"># ogólne</li>
                                 <li class="channel-item" data-module="ksef"># ksef</li>
                                 <li class="channel-item" data-module="b2b"># b2b</li>
                                 <li class="channel-item" data-module="zus"># zus</li>
-                                <li class="channel-item" data-module="vat"># vat</li>
+                                <li class="channel-item active" data-module="vat"># vat</li>
                             </ul>
                         </div>
                     </aside>
@@ -164,6 +153,33 @@
                         <ul class="files-list" id="files-list">
                             <!-- Pliki ładowane dynamicznie przez JS -->
                         </ul>
+                    </section>
+                </div>
+
+                <div class="dashboard-module" data-module-id="documents">
+                    <section class="documents-panel">
+                        <div class="documents-header">
+                            <h3>📚 Dokumenty</h3>
+                            <button type="button" class="documents-refresh" id="documents-refresh">Odśwież</button>
+                        </div>
+                        <div class="documents-body">
+                            <ul class="documents-list" id="documents-list">
+                                <!-- Lista dokumentów z API -->
+                            </ul>
+                            <div class="document-editor">
+                                <input type="text" id="doc-title" class="document-input" placeholder="Tytuł dokumentu">
+                                <input type="text" id="doc-category" class="document-input" placeholder="Kategoria (np. ksef, b2b, zus, vat)">
+                                <textarea id="doc-content" class="document-textarea" placeholder="Treść dokumentu..."></textarea>
+                                <div class="document-actions">
+                                    <button type="button" id="doc-new" class="doc-btn secondary">Nowy</button>
+                                    <button type="button" id="doc-delete" class="doc-btn danger">Usuń</button>
+                                    <button type="button" id="doc-save" class="doc-btn primary">Zapisz</button>
+                                </div>
+                                <ul class="document-events" id="document-events">
+                                    <!-- Historia zmian dokumentu -->
+                                </ul>
+                            </div>
+                        </div>
                     </section>
                 </div>
             </div>

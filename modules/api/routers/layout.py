@@ -26,9 +26,11 @@ class DashboardLayout(BaseModel):
 
 DEFAULT_LAYOUT = {
     "modules": [
-        {"id": "sidebar", "column": "left", "order": 0},
-        {"id": "chat", "column": "left", "order": 1},
-        {"id": "quick", "column": "left", "order": 2},
+        {"id": "topics", "column": "left", "order": 0},
+        {"id": "contacts", "column": "left", "order": 1},
+        {"id": "channels", "column": "left", "order": 2},
+        {"id": "chat", "column": "left", "order": 3},
+        {"id": "quick", "column": "left", "order": 4},
         {"id": "projects", "column": "right", "order": 0},
         {"id": "files", "column": "right", "order": 1},
     ]

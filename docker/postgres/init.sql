@@ -50,6 +50,31 @@ CREATE TABLE conversations (
 );
 
 -- ============================================
+-- TABELA: projects - projekty użytkownika
+-- ============================================
+CREATE TABLE projects (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT,
+    contact TEXT,                 -- np. nazwa kontaktu / kontrahenta
+    metadata JSONB DEFAULT '{}',
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- ============================================
+-- TABELA: project_files - pliki powiązane z projektami
+-- ============================================
+CREATE TABLE project_files (
+    id SERIAL PRIMARY KEY,
+    project_id INTEGER REFERENCES projects(id) ON DELETE CASCADE,
+    filename TEXT NOT NULL,
+    path TEXT,
+    metadata JSONB DEFAULT '{}',
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- ============================================
 -- INDEKSY
 -- ============================================
 
@@ -66,6 +91,19 @@ CREATE INDEX idx_conversations_module ON conversations(module);
 
 -- Indeks GIN dla full-text search (po polsku)
 CREATE INDEX idx_chunks_content_gin ON chunks USING gin(to_tsvector('simple', content));
+
+CREATE TABLE IF NOT EXISTS domain_events (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    aggregate_type TEXT NOT NULL,
+    aggregate_id TEXT NOT NULL,
+    event_type TEXT NOT NULL,
+    payload JSONB NOT NULL,
+    metadata JSONB DEFAULT '{}',
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_domain_events_agg
+    ON domain_events(aggregate_type, aggregate_id, created_at);
 
 -- ============================================
 -- FUNKCJE POMOCNICZE

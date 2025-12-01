@@ -9,6 +9,8 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 import os
 
+from services.events import append_event
+
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
@@ -20,6 +22,14 @@ class Document(BaseModel):
     id: int
     title: str
     source: Optional[str]
+    category: str
+    content: str
+
+
+class DocumentUpdate(BaseModel):
+    """Model aktualizacji dokumentu."""
+    title: str
+    source: Optional[str] = None
     category: str
     content: str
 
@@ -69,6 +79,53 @@ async def list_documents(
         
     except Exception as e:
         logger.error(f"Error listing documents: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put("/documents/{document_id}", response_model=Document)
+async def update_document(document_id: int, doc: DocumentUpdate):
+    """Zaktualizuj istniejący dokument."""
+    try:
+        conn = psycopg2.connect(DATABASE_URL)
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                UPDATE documents
+                SET title = %s,
+                    source = %s,
+                    category = %s,
+                    content = %s
+                WHERE id = %s
+                RETURNING id, title, source, category, content
+                """,
+                (doc.title, doc.source, doc.category, doc.content, document_id),
+            )
+            result = cur.fetchone()
+            conn.commit()
+        conn.close()
+
+        if not result:
+            raise HTTPException(status_code=404, detail="Dokument nie znaleziony")
+
+        append_event(
+            aggregate_type="document",
+            aggregate_id=str(result["id"]),
+            event_type="DocumentUpdated",
+            payload={
+                "id": result["id"],
+                "title": result["title"],
+                "source": result["source"],
+                "category": result["category"],
+                "content": result["content"],
+            },
+        )
+
+        return Document(**result)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating document: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -143,15 +200,31 @@ async def create_document(doc: DocumentCreate):
     try:
         conn = psycopg2.connect(DATABASE_URL)
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
+            cur.execute(
+                """
                 INSERT INTO documents (title, source, category, content)
                 VALUES (%s, %s, %s, %s)
                 RETURNING id, title, source, category, content
-            """, (doc.title, doc.source, doc.category, doc.content))
+                """,
+                (doc.title, doc.source, doc.category, doc.content),
+            )
             result = cur.fetchone()
             conn.commit()
         conn.close()
-        
+
+        append_event(
+            aggregate_type="document",
+            aggregate_id=str(result["id"]),
+            event_type="DocumentCreated",
+            payload={
+                "id": result["id"],
+                "title": result["title"],
+                "source": result["source"],
+                "category": result["category"],
+                "content": result["content"],
+            },
+        )
+
         return Document(**result)
         
     except Exception as e:
@@ -169,10 +242,17 @@ async def delete_document(document_id: int):
             deleted = cur.rowcount
             conn.commit()
         conn.close()
-        
+
         if deleted == 0:
             raise HTTPException(status_code=404, detail="Dokument nie znaleziony")
-        
+
+        append_event(
+            aggregate_type="document",
+            aggregate_id=str(document_id),
+            event_type="DocumentDeleted",
+            payload={"id": document_id},
+        )
+
         return {"message": "Dokument usunięty", "id": document_id}
         
     except HTTPException:

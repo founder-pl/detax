@@ -13,6 +13,166 @@ const MODULES = {
     vat: { name: 'VAT', icon: '💰' }
 };
 
+function getProjectIcon(name) {
+    const lower = (name || '').toLowerCase();
+    if (lower.includes('ksef') || lower.includes('faktur')) return '📋';
+    if (lower.includes('b2b') || lower.includes('umowa') || lower.includes('kontrakt')) return '💼';
+    if (lower.includes('zus') || lower.includes('składk')) return '🏥';
+    if (lower.includes('vat') || lower.includes('jpk')) return '💰';
+    return '📁';
+}
+
+function initDocumentsPanel() {
+    if (!elements.documentsList) return;
+
+    elements.documentsRefresh.addEventListener('click', loadDocuments);
+    elements.docNew.addEventListener('click', () => {
+        currentDocumentId = null;
+        clearDocumentEditor();
+    });
+    elements.docSave.addEventListener('click', saveDocument);
+    elements.docDelete.addEventListener('click', deleteDocument);
+
+    loadDocuments();
+}
+
+async function loadDocuments() {
+    if (!elements.documentsList) return;
+    try {
+        const resp = await fetch(`${API_URL.replace('/api/v1', '')}/api/v1/documents?limit=50`);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const docs = await resp.json();
+        renderDocumentsList(docs || []);
+    } catch (err) {
+        console.error('Nie udało się pobrać dokumentów:', err);
+    }
+}
+
+function renderDocumentsList(docs) {
+    elements.documentsList.innerHTML = '';
+    docs.forEach(doc => {
+        const li = document.createElement('li');
+        li.className = 'document-item';
+        li.dataset.id = doc.id;
+        li.textContent = `${doc.title} (${doc.category})`;
+        li.addEventListener('click', () => {
+            selectDocument(doc, li);
+        });
+        elements.documentsList.appendChild(li);
+    });
+}
+
+function selectDocument(doc, element) {
+    currentDocumentId = doc.id;
+    document.querySelectorAll('.document-item').forEach(li => li.classList.remove('active'));
+    if (element) element.classList.add('active');
+
+    elements.docTitle.value = doc.title || '';
+    elements.docCategory.value = doc.category || '';
+    elements.docContent.value = doc.content || '';
+
+    loadDocumentEvents(doc.id);
+}
+
+function clearDocumentEditor() {
+    document.querySelectorAll('.document-item').forEach(li => li.classList.remove('active'));
+    elements.docTitle.value = '';
+    elements.docCategory.value = '';
+    elements.docContent.value = '';
+    if (elements.documentEvents) {
+        elements.documentEvents.innerHTML = '';
+    }
+}
+
+async function loadDocumentEvents(documentId) {
+    if (!elements.documentEvents) return;
+    try {
+        const resp = await fetch(`${API_URL}/events/documents/${documentId}`);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const events = await resp.json();
+        renderDocumentEvents(events || []);
+    } catch (err) {
+        console.error('Nie udało się pobrać historii dokumentu:', err);
+    }
+}
+
+function renderDocumentEvents(events) {
+    if (!elements.documentEvents) return;
+    elements.documentEvents.innerHTML = events.map(ev => {
+        const when = new Date(ev.created_at || ev.createdAt).toLocaleString('pl-PL');
+        return `<li>[${when}] ${escapeHtml(ev.event_type || ev.eventType)}</li>`;
+    }).join('');
+}
+
+async function saveDocument() {
+    const title = elements.docTitle.value.trim();
+    const category = elements.docCategory.value.trim() || 'default';
+    const content = elements.docContent.value.trim();
+
+    if (!title || !content) {
+        alert('Tytuł i treść dokumentu nie mogą być puste.');
+        return;
+    }
+
+    const payload = { title, category, content, source: null };
+
+    try {
+        let url;
+        let body;
+
+        if (currentDocumentId) {
+            // CQRS: aktualizacja dokumentu
+            url = `${API_URL}/commands/documents/update`;
+            body = {
+                id: currentDocumentId,
+                title,
+                source: null,
+                category,
+                content,
+            };
+        } else {
+            // CQRS: utworzenie dokumentu
+            url = `${API_URL}/commands/documents/create`;
+            body = payload;
+        }
+
+        const resp = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const doc = await resp.json();
+        currentDocumentId = doc.id;
+        await loadDocuments();
+    } catch (err) {
+        console.error('Nie udało się zapisać dokumentu:', err);
+        alert('Nie udało się zapisać dokumentu. Sprawdź logi API.');
+    }
+}
+
+async function deleteDocument() {
+    if (!currentDocumentId) return;
+    if (!confirm('Na pewno usunąć ten dokument?')) return;
+
+    try {
+        const resp = await fetch(`${API_URL}/commands/documents/delete`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: currentDocumentId })
+        });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        currentDocumentId = null;
+        clearDocumentEditor();
+        await loadDocuments();
+    } catch (err) {
+        console.error('Nie udało się usunąć dokumentu:', err);
+        alert('Nie udało się usunąć dokumentu.');
+    }
+}
+};
+
 const PROJECT_FILES = {
     'projekt-1': [
         'ksef_terminy.pdf',
@@ -37,6 +197,10 @@ let currentModule = 'default';
 let isLoading = false;
 let lastSources = [];
 let isEditMode = false;
+let currentDocumentId = null;
+let currentProjectId = null;
+let currentFileId = null;
+let currentContact = null;
 
 // DOM Elements
 const elements = {
@@ -56,7 +220,16 @@ const elements = {
     filesList: document.getElementById('files-list'),
     panelLeft: document.getElementById('panel-left'),
     panelRight: document.getElementById('panel-right'),
-    editToggle: document.getElementById('edit-dashboard-toggle')
+    editToggle: document.getElementById('edit-dashboard-toggle'),
+    documentsList: document.getElementById('documents-list'),
+    documentsRefresh: document.getElementById('documents-refresh'),
+    docTitle: document.getElementById('doc-title'),
+    docCategory: document.getElementById('doc-category'),
+    docContent: document.getElementById('doc-content'),
+    docNew: document.getElementById('doc-new'),
+    docDelete: document.getElementById('doc-delete'),
+    docSave: document.getElementById('doc-save'),
+    documentEvents: document.getElementById('document-events')
 };
 
 let draggedModule = null;
@@ -69,6 +242,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initSourcesPanel();
     initChannels();
     initProjects();
+    initDocumentsPanel();
     initDashboardLayout();
     checkHealth();
     
@@ -107,40 +281,93 @@ function initChannels() {
         item.addEventListener('click', () => {
             contactItems.forEach(i => i.classList.remove('active'));
             item.classList.add('active');
+            currentContact = item.textContent.trim();
+            loadProjects();
         });
     });
 }
 
 function initProjects() {
     if (!elements.projectsList || !elements.filesList) return;
-    const items = elements.projectsList.querySelectorAll('.project-item');
-    items.forEach(item => {
-        item.addEventListener('click', () => {
-            items.forEach(i => i.classList.remove('active'));
-            item.classList.add('active');
-            const projectId = item.dataset.project;
-            renderFiles(projectId);
-        });
-    });
-    let active = elements.projectsList.querySelector('.project-item.active');
-    if (!active && items[0]) {
-        active = items[0];
-        active.classList.add('active');
-    }
-    if (active) {
-        renderFiles(active.dataset.project);
+    loadProjects();
+}
+async function loadProjects() {
+    if (!elements.projectsList) return;
+    try {
+        let url = `${API_URL}/projects?limit=50`;
+        if (currentContact) {
+            const encoded = encodeURIComponent(currentContact);
+            url = `${API_URL}/projects?contact=${encoded}&limit=50`;
+        }
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const projects = await resp.json();
+        renderProjects(projects || []);
+    } catch (err) {
+        console.error('Nie udało się pobrać projektów:', err);
     }
 }
 
-function renderFiles(projectId) {
+function renderProjects(projects) {
+    elements.projectsList.innerHTML = '';
+    currentProjectId = null;
+    currentFileId = null;
+    elements.filesList.innerHTML = '';
+
+    projects.forEach(project => {
+        const li = document.createElement('li');
+        li.className = 'project-item';
+        li.dataset.projectId = project.id;
+
+        const name = project.name || `Projekt ${project.id}`;
+        const icon = getProjectIcon(name);
+        li.innerHTML = `<span class="project-icon">${icon}</span> ${escapeHtml(name)}`;
+
+        li.addEventListener('click', () => {
+            document.querySelectorAll('.project-item').forEach(i => i.classList.remove('active'));
+            li.classList.add('active');
+            currentProjectId = project.id;
+            loadProjectFiles(project.id);
+            updateContextChannels();
+        });
+
+        elements.projectsList.appendChild(li);
+    });
+}
+
+async function loadProjectFiles(projectId) {
     if (!elements.filesList) return;
-    const files = PROJECT_FILES[projectId] || PROJECT_FILES.default || [];
-    elements.filesList.innerHTML = files
-        .map(name => {
-            const icon = getFileIcon(name);
-            return `<li class="file-item">${icon} ${escapeHtml(name)}</li>`;
-        })
-        .join('');
+    try {
+        const resp = await fetch(`${API_URL}/projects/${projectId}/files`);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const files = await resp.json();
+        renderFiles(files || []);
+    } catch (err) {
+        console.error('Nie udało się pobrać plików projektu:', err);
+    }
+}
+
+function renderFiles(files) {
+    if (!elements.filesList) return;
+    elements.filesList.innerHTML = '';
+    currentFileId = null;
+
+    files.forEach(file => {
+        const li = document.createElement('li');
+        li.className = 'file-item';
+        li.dataset.fileId = file.id;
+        const icon = getFileIcon(file.filename || '');
+        li.innerHTML = `${icon} ${escapeHtml(file.filename || '')}`;
+
+        li.addEventListener('click', () => {
+            document.querySelectorAll('.file-item').forEach(i => i.classList.remove('active'));
+            li.classList.add('active');
+            currentFileId = file.id;
+            updateContextChannels();
+        });
+
+        elements.filesList.appendChild(li);
+    });
 }
 
 function getFileIcon(filename) {
@@ -154,6 +381,41 @@ function getFileIcon(filename) {
         zip: '📦', rar: '📦'
     };
     return icons[ext] || '📄';
+}
+
+async function updateContextChannels() {
+    try {
+        const params = new URLSearchParams();
+        if (currentContact) params.append('contact', currentContact);
+        if (currentProjectId != null) params.append('project_id', String(currentProjectId));
+        if (currentFileId != null) params.append('file_id', String(currentFileId));
+
+        if (![...params.keys()].length) return; // brak kontekstu
+
+        const resp = await fetch(`${API_URL}/context/channels?${params.toString()}`);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const data = await resp.json();
+
+        const channels = data.channels || [];
+        if (channels.length === 0) return;
+
+        // wybierz pierwszy kanał jako aktywny moduł
+        const first = channels[0];
+        if (MODULES[first.id]) {
+            setModule(first.id);
+        }
+
+        // zaktualizuj podświetlenie kanałów w sidebarze
+        const recommendedIds = new Set(channels.map(c => c.id));
+        document.querySelectorAll('.channel-item').forEach(item => {
+            const mod = item.dataset.module;
+            if (!mod) return;
+            item.classList.toggle('recommended', recommendedIds.has(mod));
+        });
+
+    } catch (err) {
+        console.error('Nie udało się pobrać kanałów kontekstowych:', err);
+    }
 }
 
 async function initDashboardLayout() {
@@ -306,6 +568,9 @@ function initEditToggle() {
         isEditMode = !isEditMode;
         elements.editToggle.classList.toggle('active', isEditMode);
         elements.editToggle.setAttribute('aria-pressed', String(isEditMode));
+
+        // Global klasa dla trybu edycji (siatka, ramki, ikony uchwytu)
+        document.body.classList.toggle('dashboard-edit', isEditMode);
 
         const modules = document.querySelectorAll('.dashboard-module');
         modules.forEach(el => {

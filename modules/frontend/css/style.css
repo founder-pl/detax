@@ -64,14 +64,18 @@ body {
 
 /* Header */
 .header {
-    text-align: center;
-    padding: var(--space-lg) 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md);
+    padding: var(--space-md) 0 var(--space-lg);
+    flex-wrap: nowrap;
 }
 
 .logo {
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     gap: var(--space-sm);
 }
 
@@ -90,7 +94,161 @@ body {
 
 .tagline {
     color: var(--text-secondary);
+    margin-top: 0;
+    font-size: 0.85rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Documents panel */
+.documents-panel {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    padding: var(--space-md);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+}
+
+.documents-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-sm);
+}
+
+.documents-header h3 {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.documents-refresh {
+    border: 1px solid var(--bg-tertiary);
+    background: var(--bg-primary);
+    color: var(--text-secondary);
+    border-radius: var(--radius-md);
+    padding: 2px 8px;
+    font-size: 0.75rem;
+    cursor: pointer;
+}
+
+.documents-refresh:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+.documents-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+}
+
+.documents-list {
+    list-style: none;
+    width: 100%;
+    max-height: 160px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+}
+
+.document-item {
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-md);
+    background: var(--bg-primary);
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: background 0.2s, color 0.2s;
+}
+
+.document-item:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+.document-item.active {
+    background: var(--accent);
+    color: #ffffff;
+}
+
+.document-editor {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    padding: var(--space-sm);
+    border-radius: var(--radius-md);
+    background: var(--bg-primary);
+}
+
+.document-input {
+    width: 100%;
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--bg-tertiary);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+}
+
+.document-textarea {
+    flex: 1;
+    min-height: 120px;
+    resize: vertical;
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--bg-tertiary);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+}
+
+.document-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-sm);
     margin-top: var(--space-xs);
+}
+
+.doc-btn {
+    border-radius: var(--radius-md);
+    padding: 4px 10px;
+    font-size: 0.8rem;
+    border: none;
+    cursor: pointer;
+}
+
+.doc-btn.primary {
+    background: var(--accent);
+    color: #ffffff;
+}
+
+.doc-btn.secondary {
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+}
+
+.doc-btn.danger {
+    background: var(--error);
+    color: #ffffff;
+}
+
+.document-events {
+    list-style: none;
+    margin-top: var(--space-sm);
+    padding-top: var(--space-sm);
+    border-top: 1px solid var(--bg-tertiary);
+    max-height: 120px;
+    overflow-y: auto;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.document-events li {
+    margin-bottom: 2px;
 }
 
 .status {
@@ -202,6 +360,10 @@ body {
     color: #ffffff;
 }
 
+.channel-item.recommended:not(.active) {
+    border: 1px dashed rgba(129, 140, 248, 0.7);
+}
+
 /* PRAWA STRONA: Projekty + Pliki */
 .panel-right {
     width: 280px;
@@ -214,6 +376,7 @@ body {
 .dashboard-module {
     margin-bottom: var(--space-md);
     transition: transform 0.15s ease, box-shadow 0.15s ease;
+    position: relative;
 }
 
 .dashboard-module:hover {
@@ -229,6 +392,34 @@ body {
 .dashboard-module.no-drag,
 .dashboard-module.no-drag:hover {
     cursor: default;
+}
+
+body.dashboard-edit .main-layout {
+    background-image:
+        linear-gradient(rgba(148, 163, 184, 0.12) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(148, 163, 184, 0.12) 1px, transparent 1px);
+    background-size: 24px 24px;
+}
+
+body.dashboard-edit .dashboard-module {
+    border: 1px dashed rgba(148, 163, 184, 0.6);
+    box-shadow: none;
+}
+
+body.dashboard-edit .dashboard-module:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+body.dashboard-edit .dashboard-module::after {
+    content: "⠿";
+    position: absolute;
+    top: 6px;
+    right: 10px;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    opacity: 0.9;
+    pointer-events: none;
 }
 
 .projects-panel {
