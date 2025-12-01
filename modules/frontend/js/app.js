@@ -36,6 +36,7 @@ const PROJECT_FILES = {
 let currentModule = 'default';
 let isLoading = false;
 let lastSources = [];
+let isEditMode = false;
 
 // DOM Elements
 const elements = {
@@ -52,8 +53,13 @@ const elements = {
     closeSources: document.getElementById('close-sources'),
     quickQuestions: document.getElementById('quick-questions'),
     projectsList: document.getElementById('projects-list'),
-    filesList: document.getElementById('files-list')
+    filesList: document.getElementById('files-list'),
+    panelLeft: document.getElementById('panel-left'),
+    panelRight: document.getElementById('panel-right'),
+    editToggle: document.getElementById('edit-dashboard-toggle')
 };
+
+let draggedModule = null;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -63,6 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initSourcesPanel();
     initChannels();
     initProjects();
+    initDashboardLayout();
     checkHealth();
     
     // Focus input
@@ -74,8 +81,9 @@ document.addEventListener('DOMContentLoaded', () => {
  */
 function initModuleButtons() {
     document.querySelectorAll('.module-btn').forEach(btn => {
+        const module = btn.dataset.module;
+        if (!module) return; // pomiń przycisk Edycji
         btn.addEventListener('click', () => {
-            const module = btn.dataset.module;
             setModule(module);
         });
     });
@@ -146,6 +154,170 @@ function getFileIcon(filename) {
         zip: '📦', rar: '📦'
     };
     return icons[ext] || '📄';
+}
+
+async function initDashboardLayout() {
+    const modules = document.querySelectorAll('.dashboard-module');
+    modules.forEach(el => {
+        // Drag tylko w trybie edycji – domyślnie wyłączony
+        el.classList.add('no-drag');
+    });
+
+    try {
+        const response = await fetch(`${API_URL}/layout`);
+        if (response.ok) {
+            const data = await response.json();
+            if (data && Array.isArray(data.modules)) {
+                applyLayoutFromConfig(data.modules);
+            }
+        }
+    } catch (error) {
+        console.error('Nie udało się pobrać układu dashboardu:', error);
+    }
+
+    initDragAndDrop();
+    initEditToggle();
+}
+
+function applyLayoutFromConfig(configModules) {
+    const allModules = {};
+    document.querySelectorAll('.dashboard-module').forEach(el => {
+        const id = el.dataset.moduleId;
+        if (id) {
+            allModules[id] = el;
+        }
+    });
+
+    const leftPanel = elements.panelLeft;
+    const rightPanel = elements.panelRight;
+    if (!leftPanel || !rightPanel) return;
+
+    leftPanel.innerHTML = '';
+    rightPanel.innerHTML = '';
+
+    const byColumn = {
+        left: leftPanel,
+        right: rightPanel
+    };
+
+    configModules
+        .slice()
+        .sort((a, b) => (a.order || 0) - (b.order || 0))
+        .forEach(cfg => {
+            const el = allModules[cfg.id];
+            const panel = byColumn[cfg.column] || leftPanel;
+            if (el && panel) {
+                panel.appendChild(el);
+            }
+        });
+
+    Object.keys(allModules).forEach(id => {
+        const el = allModules[id];
+        if (el && !el.parentElement) {
+            leftPanel.appendChild(el);
+        }
+    });
+}
+
+function initDragAndDrop() {
+    const modules = document.querySelectorAll('.dashboard-module');
+    modules.forEach(el => {
+        el.addEventListener('dragstart', onModuleDragStart);
+        el.addEventListener('dragend', onModuleDragEnd);
+    });
+
+    [elements.panelLeft, elements.panelRight].forEach(panel => {
+        if (!panel) return;
+        panel.addEventListener('dragover', onPanelDragOver);
+        panel.addEventListener('drop', onPanelDrop);
+    });
+}
+
+function onModuleDragStart(event) {
+    if (!isEditMode) {
+        event.preventDefault();
+        return;
+    }
+    draggedModule = event.currentTarget;
+    event.dataTransfer.effectAllowed = 'move';
+    draggedModule.classList.add('dragging');
+}
+
+function onModuleDragEnd() {
+    if (draggedModule) {
+        draggedModule.classList.remove('dragging');
+        draggedModule = null;
+    }
+}
+
+function onPanelDragOver(event) {
+    if (!isEditMode) return;
+    event.preventDefault();
+}
+
+function onPanelDrop(event) {
+    if (!isEditMode) return;
+    event.preventDefault();
+    if (!draggedModule) return;
+    const panel = event.currentTarget;
+    const targetModule = event.target.closest('.dashboard-module');
+    if (targetModule && targetModule !== draggedModule && targetModule.parentElement === panel) {
+        panel.insertBefore(draggedModule, targetModule);
+    } else {
+        panel.appendChild(draggedModule);
+    }
+
+    draggedModule.classList.remove('dragging');
+    draggedModule = null;
+    saveCurrentLayout();
+}
+
+function saveCurrentLayout() {
+    if (!elements.panelLeft || !elements.panelRight) return;
+
+    const config = { modules: [] };
+
+    [['left', elements.panelLeft], ['right', elements.panelRight]].forEach(([column, panel]) => {
+        const mods = panel.querySelectorAll('.dashboard-module');
+        mods.forEach((el, index) => {
+            const id = el.dataset.moduleId;
+            if (!id) return;
+            config.modules.push({
+                id,
+                column,
+                order: index
+            });
+        });
+    });
+
+    fetch(`${API_URL}/layout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(config)
+    }).catch(err => {
+        console.error('Nie udało się zapisać układu dashboardu:', err);
+    });
+}
+
+function initEditToggle() {
+    if (!elements.editToggle) return;
+
+    elements.editToggle.addEventListener('click', () => {
+        isEditMode = !isEditMode;
+        elements.editToggle.classList.toggle('active', isEditMode);
+        elements.editToggle.setAttribute('aria-pressed', String(isEditMode));
+
+        const modules = document.querySelectorAll('.dashboard-module');
+        modules.forEach(el => {
+            if (isEditMode) {
+                el.classList.remove('no-drag');
+                el.setAttribute('draggable', 'true');
+            } else {
+                el.classList.add('no-drag');
+                el.removeAttribute('draggable');
+            }
+        });
+    });
 }
 
 function setModule(module) {

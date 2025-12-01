@@ -22,7 +22,7 @@
             </div>
         </header>
 
-        <!-- Module selector -->
+        <!-- Module selector + edit mode toggle -->
         <nav class="modules">
             <button class="module-btn active" data-module="default">
                 <span class="module-icon">💬</span>
@@ -44,114 +44,128 @@
                 <span class="module-icon">💰</span>
                 <span class="module-name">VAT</span>
             </button>
+            <button class="module-btn edit-toggle" id="edit-dashboard-toggle" type="button" aria-pressed="false">
+                <span class="module-icon">⚙️</span>
+                <span class="module-name">Edycja</span>
+            </button>
         </nav>
 
         <div class="main-layout">
-            <!-- LEWA STRONA: Czat + Kontakty + Kanały -->
-            <div class="panel-left">
-                <!-- Kontakty i Kanały -->
-                <aside class="sidebar-section-container">
-                    <div class="sidebar-section">
-                        <h3>👥 Kontakty</h3>
-                        <ul class="contacts-list">
-                            <li class="contact-item active">Klient A</li>
-                            <li class="contact-item">Klient B</li>
-                            <li class="contact-item">Biuro księgowe</li>
-                        </ul>
-                    </div>
-                    <div class="sidebar-section">
-                        <h3>📢 Kanały</h3>
-                        <ul class="channels-list">
-                            <li class="channel-item active" data-module="default"># ogólne</li>
-                            <li class="channel-item" data-module="ksef"># ksef</li>
-                            <li class="channel-item" data-module="b2b"># b2b</li>
-                            <li class="channel-item" data-module="zus"># zus</li>
-                            <li class="channel-item" data-module="vat"># vat</li>
-                        </ul>
-                    </div>
-                </aside>
+            <!-- LEWA STRONA: moduły dashboardu -->
+            <div class="panel-left" id="panel-left">
+                <div class="dashboard-module" data-module-id="sidebar">
+                    <!-- Kontakty i Kanały -->
+                    <aside class="sidebar-section-container">
+                        <div class="sidebar-section">
+                            <h3>👥 Kontakty</h3>
+                            <ul class="contacts-list">
+                                <li class="contact-item active">Klient A</li>
+                                <li class="contact-item">Klient B</li>
+                                <li class="contact-item">Biuro księgowe</li>
+                            </ul>
+                        </div>
+                        <div class="sidebar-section">
+                            <h3>📢 Kanały</h3>
+                            <ul class="channels-list">
+                                <li class="channel-item active" data-module="default"># ogólne</li>
+                                <li class="channel-item" data-module="ksef"># ksef</li>
+                                <li class="channel-item" data-module="b2b"># b2b</li>
+                                <li class="channel-item" data-module="zus"># zus</li>
+                                <li class="channel-item" data-module="vat"># vat</li>
+                            </ul>
+                        </div>
+                    </aside>
+                </div>
 
-                <!-- Czat -->
-                <main class="chat-container">
-                    <div id="messages" class="messages">
-                        <div class="message assistant">
-                            <div class="message-avatar">🦅</div>
-                            <div class="message-content">
-                                <p>Cześć! Jestem <strong>Bielikiem</strong> - polskim asystentem AI dla przedsiębiorców.</p>
-                                <p>Mogę pomóc Ci z:</p>
-                                <ul>
-                                    <li><strong>KSeF</strong> - terminy, wymagania, procedury e-faktur</li>
-                                    <li><strong>B2B</strong> - ryzyko przekwalifikowania umowy na etat</li>
-                                    <li><strong>ZUS</strong> - składki, ubezpieczenia, obliczenia</li>
-                                    <li><strong>VAT</strong> - JPK, VAT OSS, rozliczenia</li>
-                                </ul>
-                                <p>Wybierz kanał po lewej i zadaj pytanie!</p>
+                <div class="dashboard-module" data-module-id="chat">
+                    <!-- Czat -->
+                    <main class="chat-container">
+                        <div id="messages" class="messages">
+                            <div class="message assistant">
+                                <div class="message-avatar">🦅</div>
+                                <div class="message-content">
+                                    <p>Cześć! Jestem <strong>Bielikiem</strong> - polskim asystentem AI dla przedsiębiorców.</p>
+                                    <p>Mogę pomóc Ci z:</p>
+                                    <ul>
+                                        <li><strong>KSeF</strong> - terminy, wymagania, procedury e-faktur</li>
+                                        <li><strong>B2B</strong> - ryzyko przekwalifikowania umowy na etat</li>
+                                        <li><strong>ZUS</strong> - składki, ubezpieczenia, obliczenia</li>
+                                        <li><strong>VAT</strong> - JPK, VAT OSS, rozliczenia</li>
+                                    </ul>
+                                    <p>Wybierz kanał po lewej i zadaj pytanie!</p>
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    <form id="chat-form" class="input-area">
-                        <div class="input-wrapper">
-                            <input 
-                                type="text" 
-                                id="user-input" 
-                                placeholder="Zadaj pytanie..." 
-                                autocomplete="off"
-                                maxlength="2000"
-                            >
-                            <button type="submit" id="send-btn">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <line x1="22" y1="2" x2="11" y2="13"></line>
-                                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                                </svg>
-                            </button>
-                        </div>
-                        <div class="input-hints">
-                            <span class="current-module" id="current-module">Moduł: Ogólne</span>
-                            <span class="char-count" id="char-count">0/2000</span>
-                        </div>
-                    </form>
-                </main>
+                        <form id="chat-form" class="input-area">
+                            <div class="input-wrapper">
+                                <input 
+                                    type="text" 
+                                    id="user-input" 
+                                    placeholder="Zadaj pytanie..." 
+                                    autocomplete="off"
+                                    maxlength="2000"
+                                >
+                                <button type="submit" id="send-btn">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="input-hints">
+                                <span class="current-module" id="current-module">Moduł: Ogólne</span>
+                                <span class="char-count" id="char-count">0/2000</span>
+                            </div>
+                        </form>
+                    </main>
+                </div>
 
-                <!-- Quick questions -->
-                <section class="quick-questions" id="quick-questions">
-                    <span class="quick-label">Szybkie pytania:</span>
-                    <div class="quick-btns">
-                        <button class="quick-btn" data-question="Kiedy KSeF będzie obowiązkowy?" data-module="ksef">KSeF</button>
-                        <button class="quick-btn" data-question="Jak ocenić czy moja umowa B2B jest bezpieczna?" data-module="b2b">B2B</button>
-                        <button class="quick-btn" data-question="Ile wynosi składka zdrowotna na ryczałcie w 2025?" data-module="zus">ZUS</button>
-                        <button class="quick-btn" data-question="Co to jest VAT OSS i kiedy go stosować?" data-module="vat">VAT</button>
-                    </div>
-                </section>
+                <div class="dashboard-module" data-module-id="quick">
+                    <!-- Quick questions -->
+                    <section class="quick-questions" id="quick-questions">
+                        <span class="quick-label">Szybkie pytania:</span>
+                        <div class="quick-btns">
+                            <button class="quick-btn" data-question="Kiedy KSeF będzie obowiązkowy?" data-module="ksef">KSeF</button>
+                            <button class="quick-btn" data-question="Jak ocenić czy moja umowa B2B jest bezpieczna?" data-module="b2b">B2B</button>
+                            <button class="quick-btn" data-question="Ile wynosi składka zdrowotna na ryczałcie w 2025?" data-module="zus">ZUS</button>
+                            <button class="quick-btn" data-question="Co to jest VAT OSS i kiedy go stosować?" data-module="vat">VAT</button>
+                        </div>
+                    </section>
+                </div>
             </div>
 
-            <!-- PRAWA STRONA: Projekty + Pliki -->
-            <div class="panel-right">
-                <section class="projects-panel">
-                    <div class="projects-header">
-                        <h3>📁 Projekty</h3>
-                    </div>
-                    <ul class="projects-list" id="projects-list">
-                        <li class="project-item active" data-project="projekt-1">
-                            <span class="project-icon">📋</span> Projekt KSeF
-                        </li>
-                        <li class="project-item" data-project="projekt-2">
-                            <span class="project-icon">💼</span> Projekt B2B
-                        </li>
-                        <li class="project-item" data-project="projekt-3">
-                            <span class="project-icon">💰</span> Projekt VAT
-                        </li>
-                    </ul>
-                </section>
+            <!-- PRAWA STRONA: moduły dashboardu -->
+            <div class="panel-right" id="panel-right">
+                <div class="dashboard-module" data-module-id="projects">
+                    <section class="projects-panel">
+                        <div class="projects-header">
+                            <h3>📁 Projekty</h3>
+                        </div>
+                        <ul class="projects-list" id="projects-list">
+                            <li class="project-item active" data-project="projekt-1">
+                                <span class="project-icon">📋</span> Projekt KSeF
+                            </li>
+                            <li class="project-item" data-project="projekt-2">
+                                <span class="project-icon">💼</span> Projekt B2B
+                            </li>
+                            <li class="project-item" data-project="projekt-3">
+                                <span class="project-icon">💰</span> Projekt VAT
+                            </li>
+                        </ul>
+                    </section>
+                </div>
 
-                <section class="files-panel">
-                    <div class="files-header">
-                        <h3>📄 Pliki projektu</h3>
-                    </div>
-                    <ul class="files-list" id="files-list">
-                        <!-- Pliki ładowane dynamicznie przez JS -->
-                    </ul>
-                </section>
+                <div class="dashboard-module" data-module-id="files">
+                    <section class="files-panel">
+                        <div class="files-header">
+                            <h3>📄 Pliki projektu</h3>
+                        </div>
+                        <ul class="files-list" id="files-list">
+                            <!-- Pliki ładowane dynamicznie przez JS -->
+                        </ul>
+                    </section>
+                </div>
             </div>
         </div>
 

@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import logging
 
-from routers import chat, documents, health
+from routers import chat, documents, health, layout
 
 # Konfiguracja logowania
 logging.basicConfig(
@@ -60,6 +60,7 @@ app.add_middleware(
 app.include_router(health.router, tags=["health"])
 app.include_router(chat.router, prefix="/api/v1", tags=["chat"])
 app.include_router(documents.router, prefix="/api/v1", tags=["documents"])
+app.include_router(layout.router, prefix="/api/v1", tags=["layout"])
 
 
 @app.get("/", tags=["root"])

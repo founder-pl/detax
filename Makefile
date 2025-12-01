@@ -3,7 +3,7 @@
 include .env
 export
 
-.PHONY: help up start stop down restart logs api-logs frontend-logs ps build clean \
+.PHONY: help up start stop down restart rebuild logs api-logs frontend-logs ps build clean \
 	package package-upload publish publish-test test pull-model
 
 help:
@@ -12,7 +12,8 @@ help:
 	@echo "  make up           - tylko docker compose up -d (szybki start)"
 	@echo "  make down         - zatrzymaj kontenery"
 	@echo "  make stop         - alias do down"
-	@echo "  make restart      - zatrzymaj, zbuduj obrazy i uruchom ponownie"
+	@echo "  make restart      - szybki restart (down + up --build)"
+	@echo "  make rebuild      - twardy restart: usuń obrazy usług i zbuduj od zera"
 	@echo "  make logs         - logi wszystkich serwisów"
 	@echo "  make api-logs     - logi backendu API"
 	@echo "  make frontend-logs- logi frontendu"
@@ -38,6 +39,11 @@ stop: down
 
 restart:
 	docker compose down
+	docker compose up --build
+
+# Twardy restart: usuń stare obrazy usług i zbuduj od zera
+rebuild:
+	docker compose down --rmi local --remove-orphans
 	docker compose up -d --build
 
 logs:

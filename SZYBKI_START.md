@@ -4,7 +4,6 @@
 
 ```bash
 # 1. Wypakuj projekt
-unzip bielik-mvp.zip
 cd bielik-mvp
 
 # 2. Uruchom wszystko jedną komendą

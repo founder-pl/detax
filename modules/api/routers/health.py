@@ -25,7 +25,8 @@ async def health_check():
         "api": "healthy",
         "database": "unknown",
         "ollama": "unknown",
-        "model": "unknown"
+        "model": "unknown",
+        "layout": "unknown",
     }
     
     # Sprawdź bazę danych
@@ -39,6 +40,32 @@ async def health_check():
         logger.error(f"Database health check failed: {e}")
         status["database"] = "unhealthy"
     
+    # Sprawdź układ dashboardu (tabela dashboard_layouts)
+    try:
+        conn = psycopg2.connect(DATABASE_URL, connect_timeout=5)
+        with conn.cursor() as cur:
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS dashboard_layouts (
+                    id SERIAL PRIMARY KEY,
+                    profile VARCHAR(50) UNIQUE NOT NULL,
+                    layout_json TEXT NOT NULL,
+                    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                )
+            """)
+            conn.commit()
+            cur.execute("SELECT layout_json FROM dashboard_layouts WHERE profile = %s", ("default",))
+            row = cur.fetchone()
+        conn.close()
+
+        if row:
+            status["layout"] = "loaded"
+        else:
+            status["layout"] = "default"
+
+    except Exception as e:
+        logger.error(f"Layout health check failed: {e}")
+        status["layout"] = "unhealthy"
+
     # Sprawdź Ollama
     try:
         response = requests.get(f"{OLLAMA_URL}/", timeout=5)
@@ -70,10 +97,17 @@ async def health_check():
         logger.error(f"Model health check failed: {e}")
         status["model"] = "unknown"
     
-    # Określ ogólny status
-    if all(v == "healthy" for v in status.values()):
+    # Określ ogólny status (layout jest tylko informacyjny)
+    core_services = {
+        "api": status["api"],
+        "database": status["database"],
+        "ollama": status["ollama"],
+        "model": status["model"],
+    }
+
+    if all(v == "healthy" for v in core_services.values()):
         overall = "healthy"
-    elif status["database"] == "unhealthy" or status["ollama"] == "unhealthy":
+    elif core_services["database"] == "unhealthy" or core_services["ollama"] == "unhealthy":
         overall = "unhealthy"
     else:
         overall = "degraded"

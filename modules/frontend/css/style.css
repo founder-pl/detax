@@ -211,6 +211,26 @@ body {
     flex-shrink: 0;
 }
 
+.dashboard-module {
+    margin-bottom: var(--space-md);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.dashboard-module:hover {
+    cursor: grab;
+}
+
+.dashboard-module.dragging {
+    cursor: grabbing;
+    transform: scale(0.99);
+    box-shadow: var(--shadow-lg);
+}
+
+.dashboard-module.no-drag,
+.dashboard-module.no-drag:hover {
+    cursor: default;
+}
+
 .projects-panel {
     background: var(--bg-secondary);
     border-radius: var(--radius-lg);
@@ -311,6 +331,17 @@ body {
 
 .module-icon {
     font-size: 1.1rem;
+}
+
+.edit-toggle {
+    margin-left: auto;
+    background: var(--bg-tertiary);
+}
+
+.edit-toggle.active {
+    background: var(--warning);
+    border-color: var(--warning);
+    color: #111827;
 }
 
 /* Chat container */
