@@ -15,11 +15,16 @@ router = APIRouter()
 
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://bielik:bielik_dev_2024@localhost:5432/bielik_knowledge")
 
-# Nextcloud integration
+# Nextcloud integration (wbudowany w szyfromat.pl)
+# Subdomena: nextcloud.szyfromat.pl
 NEXTCLOUD_URL = os.getenv("NEXTCLOUD_URL", "http://localhost:8090")
+NEXTCLOUD_DOMAIN = os.getenv("NEXTCLOUD_DOMAIN", "nextcloud.szyfromat.pl")
 NEXTCLOUD_USER = os.getenv("NEXTCLOUD_USER", "admin")
 NEXTCLOUD_PASSWORD = os.getenv("NEXTCLOUD_PASSWORD", "admin")
 NEXTCLOUD_EDORECZENIA_FOLDER = os.getenv("NEXTCLOUD_FOLDER", "/e-Doreczenia")
+
+# IDCard.pl webmail integration
+IDCARD_WEBMAIL_DOMAIN = os.getenv("IDCARD_WEBMAIL_DOMAIN", "webmail.idcard.pl")
 
 
 MODULES = [
@@ -261,6 +266,8 @@ async def get_nextcloud_context(
         return {
             "status": "connected",
             "nextcloud_url": NEXTCLOUD_URL,
+            "nextcloud_domain": NEXTCLOUD_DOMAIN,
+            "webmail_domain": IDCARD_WEBMAIL_DOMAIN,
             "edoreczenia_folder": NEXTCLOUD_EDORECZENIA_FOLDER,
             "user_context": {
                 "nip": user_nip,
@@ -269,7 +276,12 @@ async def get_nextcloud_context(
             "folders": folders,
             "files": files[:20],  # Limit
             "ai_context_available": True,
-            "message": "Kontekst e-Doręczeń dostępny dla AI"
+            "architecture": {
+                "email_source": f"https://{IDCARD_WEBMAIL_DOMAIN}",
+                "sync_target": f"https://{NEXTCLOUD_DOMAIN}",
+                "ai_consumer": "detax.pl"
+            },
+            "message": "Kontekst z nextcloud.szyfromat.pl dostępny dla AI"
         }
     except Exception as e:
         logger.error(f"Error getting Nextcloud context: {e}")
