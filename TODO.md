@@ -1322,3 +1322,221 @@ Sprawdz czy sa zwracane poprawne requesty, dodaj do planu zadan nowe funkcje, kt
 
 dodaj zrodla pobeirania danych zwiazanych z prawnymi regulacjami itd
 dodaj integracje z systemem z API z urzedowymi i komercyjnymi  serisami tak jak w planie TODO.md 
+
+---
+
+## 📋 FAZA 9: Integracje i Źródła Danych (NOWE)
+
+### ✅ WYKONANE: Testy E2E
+
+Utworzono pełny zestaw testów E2E w `/tests/e2e/`:
+
+```bash
+# Uruchomienie testów
+python tests/e2e/test_documents_flow.py
+
+# Lub przez pytest
+pytest tests/e2e/ -v
+```
+
+**Testowane scenariusze:**
+- [x] Health check API
+- [x] Tworzenie dokumentów (CQRS command)
+- [x] Event sourcing (DocumentCreated, DocumentUpdated, DocumentDeleted)
+- [x] Aktualizacja dokumentów
+- [x] Odczyt dokumentów
+- [x] Chat RAG z kontekstem
+- [x] Weryfikacja kontekstowej relerentności odpowiedzi
+- [x] Tworzenie projektów
+- [x] Rekomendacje kanałów na podstawie kontekstu
+- [x] Hierarchia kontekstu (Kontakty → Projekty → Pliki)
+- [x] Czyszczenie danych testowych
+
+### ✅ WYKONANE: Źródła Danych Prawnych
+
+Utworzono serwis `/modules/api/services/data_sources.py` z integracjami:
+
+#### Źródła Urzędowe (Official)
+| Źródło | API | Status |
+|--------|-----|--------|
+| ISAP (Sejm RP) | Web scraping | ✅ Aktywne |
+| Dziennik Ustaw | Web | ✅ Aktywne |
+| KSeF (MF) | REST API | 🔑 Wymaga klucza |
+| e-Urząd Skarbowy | Web | ✅ Aktywne |
+| eZUS | REST API | 🔑 Wymaga klucza |
+| CEIDG | REST API | 🔑 Wymaga klucza |
+| KRS | REST API | ✅ Aktywne |
+| GUS BDL | REST API | 🔑 Wymaga klucza |
+| VIES (UE) | REST API | ✅ Aktywne |
+
+#### Źródła Komercyjne
+| Źródło | API | Status |
+|--------|-----|--------|
+| LEX (Wolters Kluwer) | REST API | 💰 Wymaga licencji |
+| Legalis (C.H. Beck) | REST API | 💰 Wymaga licencji |
+
+#### Nowe Endpointy API
+```
+GET  /api/v1/sources                    - Lista źródeł danych
+GET  /api/v1/sources/{id}               - Szczegóły źródła
+GET  /api/v1/sources/category/{cat}     - Źródła dla kategorii
+GET  /api/v1/legal-documents            - Kluczowe dokumenty prawne
+POST /api/v1/verify                     - Weryfikacja podmiotu (NIP/KRS/VAT)
+GET  /api/v1/verify/vat/{number}        - Szybka weryfikacja VAT UE
+```
+
+---
+
+## 📋 FAZA 10: Usprawnienia Obiegu Dokumentów (PLANOWANE)
+
+### 10.1 Automatyczne Pobieranie Dokumentów
+- [ ] Crawler ISAP dla aktów prawnych
+- [ ] Parser PDF dla dokumentów urzędowych
+- [ ] Automatyczne chunking z zachowaniem struktury artykułów
+- [ ] Scheduled sync z oficjalnymi źródłami
+
+### 10.2 Wersjonowanie Dokumentów
+- [ ] Git-like diff dla zmian w dokumentach
+- [ ] Śledzenie historii wersji
+- [ ] Porównywanie wersji dokumentów
+- [ ] Powiadomienia o zmianach w przepisach
+
+### 10.3 Tagowanie i Kategoryzacja
+- [ ] Auto-tagging na podstawie treści (NLP)
+- [ ] Hierarchiczne kategorie (VAT → OSS → Progi)
+- [ ] Cross-linking między dokumentami
+- [ ] Sugestie powiązanych dokumentów
+
+### 10.4 Workflow Dokumentów
+- [ ] Status dokumentu (Draft → Review → Published)
+- [ ] Przypisanie do projektów/kontaktów
+- [ ] Komentarze i adnotacje
+- [ ] Eksport do PDF/DOCX
+
+### 10.5 Integracja z Kanałami
+- [ ] Auto-rekomendacja kanałów na podstawie treści dokumentu
+- [ ] Filtrowanie dokumentów po aktywnych kanałach
+- [ ] Kontekstowe wyszukiwanie w ramach projektu
+
+---
+
+## 📋 FAZA 11: Zaawansowane Integracje API (PLANOWANE)
+
+### 11.1 KSeF - Krajowy System e-Faktur
+```
+Wymagania:
+- Certyfikat kwalifikowany / Profil Zaufany
+- Token autoryzacyjny z MF
+- Struktura XML FA(3)
+
+Funkcjonalności:
+- [ ] Autoryzacja przez token
+- [ ] Pobieranie faktur zakupowych
+- [ ] Wystawianie faktur sprzedażowych
+- [ ] Status faktury w KSeF
+- [ ] Archiwum 10-letnie
+```
+
+### 11.2 e-Urząd Skarbowy
+```
+Funkcjonalności:
+- [ ] Sprawdzanie statusu rozliczeń
+- [ ] Pobieranie deklaracji
+- [ ] Generowanie UPO
+- [ ] Kalendarz terminów podatkowych
+```
+
+### 11.3 eZUS
+```
+Wymagania:
+- Podpis kwalifikowany / Profil Zaufany
+
+Funkcjonalności:
+- [ ] Sprawdzanie sald na koncie
+- [ ] Pobieranie deklaracji DRA
+- [ ] Historia składek
+- [ ] Kalkulator składek
+```
+
+### 11.4 CEIDG / KRS
+```
+Funkcjonalności:
+- [ ] Weryfikacja kontrahenta po NIP
+- [ ] Pobieranie danych rejestrowych
+- [ ] Sprawdzanie statusu działalności
+- [ ] Historia zmian w rejestrze
+```
+
+### 11.5 VIES / Biała Lista VAT
+```
+Funkcjonalności:
+- [ ] Weryfikacja VAT UE
+- [ ] Sprawdzanie na Białej Liście
+- [ ] Walidacja numeru konta
+- [ ] Cache dla częstych zapytań
+```
+
+---
+
+## 📋 FAZA 12: Rozszerzenia Frontend (PLANOWANE)
+
+### 12.1 Panel Źródeł Danych
+- [ ] Lista dostępnych źródeł z statusem
+- [ ] Konfiguracja kluczy API
+- [ ] Historia synchronizacji
+- [ ] Logi błędów pobierania
+
+### 12.2 Weryfikator Kontrahenta
+- [ ] Formularz weryfikacji NIP/KRS/VAT
+- [ ] Wyświetlanie danych rejestrowych
+- [ ] Zapisywanie do kontaktów
+- [ ] Historia weryfikacji
+
+### 12.3 Panel Dokumentów Prawnych
+- [ ] Przeglądarka dokumentów ISAP
+- [ ] Wyszukiwanie po numerze aktu
+- [ ] Podgląd PDF
+- [ ] Import do bazy wiedzy
+
+### 12.4 Dashboard Przepisów
+- [ ] Kalendarz terminów (KSeF, JPK, ZUS)
+- [ ] Powiadomienia o zmianach
+- [ ] Widget "Co nowego w przepisach"
+- [ ] Personalizacja dla wybranych kategorii
+
+---
+
+## 🔧 Konfiguracja Kluczy API
+
+Dodaj do `.env`:
+```bash
+# CEIDG API
+CEIDG_API_KEY=your_ceidg_api_key
+
+# KSeF (Ministerstwo Finansów)
+KSEF_API_KEY=your_ksef_token
+KSEF_CERT_PATH=/path/to/certificate.pem
+
+# ZUS
+ZUS_API_KEY=your_zus_api_key
+
+# GUS BDL
+GUS_API_KEY=your_gus_api_key
+
+# Komercyjne (opcjonalne)
+LEX_API_KEY=your_lex_api_key
+LEGALIS_API_KEY=your_legalis_api_key
+```
+
+---
+
+## ⏱️ Szacowany czas realizacji
+
+| Faza | Czas | Status |
+|------|------|--------|
+| Faza 9: Testy E2E + Źródła | 4h | ✅ DONE |
+| Faza 10: Obieg dokumentów | 8-12h | 🔲 TODO |
+| Faza 11: Integracje API | 16-24h | 🔲 TODO |
+| Faza 12: Frontend | 8-12h | 🔲 TODO |
+
+
