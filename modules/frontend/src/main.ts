@@ -30,9 +30,95 @@ const config: AppConfig = {
 };
 
 /**
+ * Handle SSO token from URL (IDCard.pl integration)
+ */
+function handleSSOToken(): void {
+  const urlParams = new URLSearchParams(window.location.search);
+  const ssoToken = urlParams.get('sso_token');
+  
+  if (ssoToken) {
+    // Save token to localStorage
+    localStorage.setItem('detax_token', ssoToken);
+    
+    // Decode token to get user info
+    try {
+      const payload = JSON.parse(atob(ssoToken.split('.')[1]));
+      const user = {
+        id: payload.sub,
+        email: payload.email,
+        sso: true,
+        sso_from: payload.sso_from || 'idcard.pl'
+      };
+      localStorage.setItem('detax_user', JSON.stringify(user));
+      console.log('✅ SSO login successful:', user.email);
+      
+      // Show SSO success message in UI
+      showSSOSuccess(user.email);
+    } catch (e) {
+      console.error('SSO token decode error:', e);
+    }
+    
+    // Remove token from URL
+    window.history.replaceState({}, document.title, window.location.pathname);
+  } else {
+    // Check if already logged in via SSO
+    const savedUser = localStorage.getItem('detax_user');
+    if (savedUser) {
+      try {
+        const user = JSON.parse(savedUser);
+        if (user.sso) {
+          updateUserDisplay(user.email);
+        }
+      } catch (e) {}
+    }
+  }
+}
+
+/**
+ * Show SSO success notification
+ */
+function showSSOSuccess(email: string): void {
+  // Update status display
+  const statusText = document.querySelector('.status-text');
+  if (statusText) {
+    statusText.textContent = `Zalogowano przez IDCard.pl: ${email}`;
+    statusText.parentElement?.classList.add('connected');
+  }
+  
+  // Add welcome message to chat
+  const messages = document.getElementById('messages');
+  if (messages) {
+    const welcomeMsg = document.createElement('div');
+    welcomeMsg.className = 'message assistant';
+    welcomeMsg.innerHTML = `
+      <div class="message-avatar">🔐</div>
+      <div class="message-content">
+        <p><strong>Zalogowano przez IDCard.pl!</strong></p>
+        <p>Witaj, <strong>${email}</strong>! Jesteś zalogowany przez Single Sign-On z IDCard.pl.</p>
+        <p>Możesz teraz korzystać z wszystkich funkcji Detax AI.</p>
+      </div>
+    `;
+    messages.insertBefore(welcomeMsg, messages.firstChild?.nextSibling || null);
+  }
+}
+
+/**
+ * Update user display for returning SSO users
+ */
+function updateUserDisplay(email: string): void {
+  const statusText = document.querySelector('.status-text');
+  if (statusText) {
+    statusText.textContent = `Zalogowano: ${email}`;
+  }
+}
+
+/**
  * Initialize with legacy modules (existing HTML structure)
  */
 function initLegacy(): void {
+  // Handle SSO token first
+  handleSSOToken();
+  
   initChat();
   initDocumentsPanel();
   initProjectsPanel();

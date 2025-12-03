@@ -1,6 +1,6 @@
 # Bielik MVP - Git Ignore
 node_modules/
-
+tests/ui/playwright-report
 # Python
 __pycache__/
 *.py[cod]
